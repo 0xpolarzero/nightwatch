@@ -32,19 +32,15 @@ export interface Tweet {
   created_at: string;
   conversation_id: number | null;
   url: string;
-
-  // Joined fields when querying with author information
-  username?: string;
-  name?: string;
-  profile_picture_url?: string;
+  author: Author;
 }
 
 // API response types
-export interface SearchTweetsResponse {
+export interface ApiSearchResponse {
   tweets: Tweet[];
 }
 
-export interface UpdateTweetsResponse {
+export interface ApiSyncResponse {
   message: string;
   inserted: number;
 }

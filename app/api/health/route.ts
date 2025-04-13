@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { sql } from "@/lib/db";
 
-export async function GET(request: NextRequest) {
+export async function GET(_: NextRequest) {
   try {
     // Test the database connection
     const dbResult = await sql`SELECT NOW() as time`;
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 }
 
 // Add a HEAD handler for health checks
-export async function HEAD(request: NextRequest) {
+export async function HEAD(_: NextRequest) {
   try {
     await sql`SELECT 1`;
     return new NextResponse(null, { status: 200 });

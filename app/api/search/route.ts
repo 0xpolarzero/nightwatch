@@ -2,14 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { sql } from "@/lib/db";
 
-export async function GET(request: NextRequest) {
+export async function GET(req: NextRequest) {
   // Get the query from URL params
-  const searchParams = request.nextUrl.searchParams;
+  const searchParams = req.nextUrl.searchParams;
   const queryText = searchParams.get("query");
 
-  if (!queryText) {
-    return NextResponse.json({ error: "Missing query parameter" }, { status: 400 });
-  }
+  if (!queryText) return NextResponse.json({ error: "Missing query parameter" }, { status: 400 });
 
   try {
     // Execute a single query that:
@@ -20,18 +18,22 @@ export async function GET(request: NextRequest) {
       `
       WITH matching AS (
         SELECT id, conversation_id
-        FROM tweets
+        FROM tweet
         WHERE text ILIKE $1
       )
       SELECT DISTINCT 
         t.id, 
         t.text, 
-        t.created_at, 
-        t.author_id, 
+        t.created_at,
+        t.url,
         t.conversation_id, 
-        a.username, 
-        a.name
-      FROM tweets t
+        jsonb_build_object(
+          'id', a.id,
+          'username', a.username,
+          'name', a.name,
+          'profile_picture_url', a.profile_picture_url
+        ) as author
+      FROM tweet t
       JOIN author a ON t.author_id = a.id
       WHERE t.id IN (SELECT id FROM matching)
          OR t.conversation_id IN (

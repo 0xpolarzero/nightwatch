@@ -2,30 +2,30 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { RELEVANT_USERS } from "@/lib/constants";
 import { sql } from "@/lib/db";
-import { AdvancedSearchResponse, Author, Tweet } from "@/lib/types";
+import { AdvancedSearchResponse, Author } from "@/lib/types";
 
 const twitterApiKey = process.env.TWITTERAPI_API_KEY;
 if (!twitterApiKey) throw new Error("TWITTERAPI_API_KEY is not set");
 
-export async function GET(request: NextRequest) {
+// Get all tweets from users and insert them into the database
+// Supports restarting, as it will keep going with tweets before the oldest tweet in the database
+export async function GET(req: NextRequest) {
   // Verify the request is from a cron job or has proper authorization
-  const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
-
   if (!cronSecret) {
     console.error("CRON_SECRET environment variable is not set");
     return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
   }
 
-  if (authHeader !== `Bearer ${cronSecret}`) {
+  if (req.headers.get("Authorization") !== `Bearer ${cronSecret}`) {
     console.error("Unauthorized access attempt to update-tweets endpoint");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    // 1. Get the latest tweet id from the database.
-    const rows = await sql`SELECT id, created_at FROM tweet ORDER BY created_at DESC LIMIT 1`;
-    const sinceId: string | undefined = rows[0]?.id;
+    // 1. Get the oldest tweet id from the database.
+    const rows = await sql`SELECT id, created_at FROM tweet ORDER BY created_at ASC LIMIT 1`;
+    const beforeId: string | undefined = rows[0]?.id;
 
     // 2. Fetch tweets in batches and insert them into the database
     let nextCursor: string | undefined = "";
@@ -37,8 +37,8 @@ export async function GET(request: NextRequest) {
 
       // Fetch tweets until we reach the batch size or there are no more tweets
       while (nextCursor !== undefined && batchTweets.length < BATCH_SIZE) {
-        const query = sinceId
-          ? `from:${RELEVANT_USERS.join(" OR ")} since_id:${sinceId}`
+        const query = beforeId
+          ? `from:${RELEVANT_USERS.join(" OR ")} max_id:${beforeId}`
           : `from:${RELEVANT_USERS.join(" OR ")}`;
 
         const response = await fetch(
@@ -138,11 +138,6 @@ export async function GET(request: NextRequest) {
     console.error("Error updating tweets:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}
-
-// Also allow POST method for easier manual triggering or webhooks
-export async function POST(request: NextRequest) {
-  return GET(request);
 }
 
 // Specify Node.js runtime for this API route
