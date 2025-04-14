@@ -28,6 +28,9 @@ jobs:
         with:
           node-version: lts/*
 
+      - name: Install pnpm
+        run: "npm install -g pnpm"
+
       - name: Install step
         run: "pnpm install"
 
@@ -40,5 +43,3 @@ jobs:
           project: "polarzero-nightwatch"
           entrypoint: "https://deno.land/std@0.217.0/http/file_server.ts"
           root: "build"
-          
-          
