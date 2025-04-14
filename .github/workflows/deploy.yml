@@ -45,7 +45,7 @@ jobs:
         with:
           project: "polarzero-nightwatch" # Your Deno Deploy project name
           entrypoint: server.production.ts # The main server script
-          root: .
+          root: ""
           include: |
             deno.json
             deno.lock
