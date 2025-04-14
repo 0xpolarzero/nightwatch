@@ -1,6 +1,5 @@
-import { AdvancedSearchResponse, DbAuthor, DbMediaType, DbMentionType, DbTweet, DbUrlType } from "~/lib/types";
-
-import { sql } from "./db.server";
+import { sql } from "~/lib/db.server.ts";
+import { AdvancedSearchResponse, DbAuthor, DbMediaType, DbMentionType, DbUrlType } from "~/lib/types.ts";
 
 export const insertBatchTweetsAndAuthors = async (batch: AdvancedSearchResponse["tweets"]) => {
   // Process this batch of tweets
@@ -35,14 +34,14 @@ export const insertBatchTweetsAndAuthors = async (batch: AdvancedSearchResponse[
   );
 
   // --- Format data for Author INSERT using VALUES with ROW/ARRAY literals ---
-  let authorSqlFragments: string[] = [];
-  let authorParams: any[] = [];
+  const authorSqlFragments: Array<string> = [];
+  const authorParams: Array<string | number> = [];
   let authorParamCounter = 1;
 
   for (const author of Object.values(authors)) {
     // --- Prepare parameters and placeholders for this author ---
-    const currentParams: any[] = [];
-    const placeholders: string[] = []; // To store $1, $2, etc. for basic fields
+    const currentParams: Array<string | number> = [];
+    const placeholders: Array<string> = []; // To store $1, $2, etc. for basic fields
 
     // Basic author fields
     currentParams.push(
@@ -60,7 +59,7 @@ export const insertBatchTweetsAndAuthors = async (batch: AdvancedSearchResponse[
     const descriptionPlaceholder = `$${authorParamCounter++}`; // $7
 
     // Mentions Array for profile_bio
-    let mentionRowsSql: string[] = [];
+    const mentionRowsSql: Array<string> = [];
     for (const mention of author.profile_bio.user_mentions) {
       const mentionPlaceholders = [
         `$${authorParamCounter++}`, // username
@@ -75,7 +74,7 @@ export const insertBatchTweetsAndAuthors = async (batch: AdvancedSearchResponse[
       mentionRowsSql.length > 0 ? `ARRAY[${mentionRowsSql.join(", ")}]::mention_type[]` : "'{}'::mention_type[]"; // Empty array literal
 
     // URLs Array for profile_bio
-    let urlRowsSql: string[] = [];
+    const urlRowsSql: Array<string> = [];
     for (const url of author.profile_bio.urls) {
       const urlPlaceholders = [
         `$${authorParamCounter++}`, // display_url
@@ -119,8 +118,8 @@ export const insertBatchTweetsAndAuthors = async (batch: AdvancedSearchResponse[
 
   // 4. Insert new tweets into the database.
   // --- Format data for Tweet INSERT using VALUES with ROW/ARRAY literals ---
-  let tweetSqlFragments: string[] = [];
-  let tweetParams: any[] = [];
+  const tweetSqlFragments: Array<string> = [];
+  const tweetParams: Array<string | number | null> = [];
   let tweetParamCounter = 1;
 
   for (const tweet of batch) {
@@ -149,8 +148,8 @@ export const insertBatchTweetsAndAuthors = async (batch: AdvancedSearchResponse[
       })) ?? [];
 
     // --- Prepare parameters and placeholders for this tweet ---
-    const currentParams: any[] = [];
-    const placeholders: string[] = []; // To store $1, $2, etc. for basic fields
+    const currentParams: Array<string | number | null> = [];
+    const placeholders: Array<string> = []; // To store $1, $2, etc. for basic fields
 
     // Basic tweet fields
     currentParams.push(
@@ -164,7 +163,7 @@ export const insertBatchTweetsAndAuthors = async (batch: AdvancedSearchResponse[
     placeholders.push(...currentParams.map(() => `$${tweetParamCounter++}`)); // $1 to $6
 
     // Mentions Array
-    let mentionRowsSql: string[] = [];
+    const mentionRowsSql: Array<string> = [];
     for (const mention of tweetMentions) {
       const mentionPlaceholders = [
         `$${tweetParamCounter++}`, // username
@@ -178,7 +177,7 @@ export const insertBatchTweetsAndAuthors = async (batch: AdvancedSearchResponse[
       mentionRowsSql.length > 0 ? `ARRAY[${mentionRowsSql.join(", ")}]::mention_type[]` : "'{}'::mention_type[]";
 
     // URLs Array
-    let urlRowsSql: string[] = [];
+    const urlRowsSql: Array<string> = [];
     for (const url of tweetUrls) {
       const urlPlaceholders = [
         `$${tweetParamCounter++}`, // display_url
@@ -192,7 +191,7 @@ export const insertBatchTweetsAndAuthors = async (batch: AdvancedSearchResponse[
     const urlsArraySql = urlRowsSql.length > 0 ? `ARRAY[${urlRowsSql.join(", ")}]::url_type[]` : "'{}'::url_type[]";
 
     // Media Array
-    let mediaRowsSql: string[] = [];
+    const mediaRowsSql: Array<string> = [];
     for (const media of tweetMedias) {
       const mediaPlaceholders = [
         `$${tweetParamCounter++}`, // url

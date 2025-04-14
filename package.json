@@ -4,19 +4,22 @@
   "sideEffects": false,
   "type": "module",
   "scripts": {
-    "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
-    "build": "remix vite:build",
-    "dev": "remix vite:dev",
-    "start": "remix-serve ./build/server/index.js"
+    "build": "deno run -A npm:@remix-run/dev vite:build",
+    "deploy": "deployctl deploy --prod --include=deno.json,deno.lock,build,package.json,server --project=polarzero-nightwatch ./server.production.ts",
+    "dev": "deno run -A npm:@remix-run/dev vite:dev",
+    "format": "deno fmt",
+    "lint": "deno lint && deno run -A npm:eslint .",
+    "start": "deno serve -A --parallel ./server.production.ts",
+    "typecheck": "deno check --node-modules-dir=auto '**/*'"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.0",
     "@radix-ui/react-avatar": "^1.1.4",
     "@radix-ui/react-dialog": "^1.1.7",
     "@radix-ui/react-slot": "^1.2.0",
-    "@remix-run/node": "^2.16.5",
+    "@remix-run/deno": "^2.16.5",
     "@remix-run/react": "^2.16.5",
-    "@remix-run/serve": "^2.16.5",
+    "@remix-run/server-runtime": "^2.16.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "isbot": "^4.1.0",
@@ -27,7 +30,6 @@
     "tw-animate-css": "^1.2.5"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250414.0",
     "@ianvs/prettier-plugin-sort-imports": "^4.4.1",
     "@remix-run/dev": "^2.16.5",
     "@tailwindcss/postcss": "^4.1.3",
@@ -46,7 +48,6 @@
     "prettier": "^3.5.3",
     "prettier-plugin-jsdoc": "^1.3.2",
     "prettier-plugin-tailwindcss": "^0.6.11",
-    "sst": "^3.13.10",
     "tailwindcss": "^4.1.3",
     "typescript": "^5.1.6",
     "vite": "^6.0.0",

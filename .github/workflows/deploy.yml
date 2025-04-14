@@ -26,20 +26,29 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: lts/*
+          node-version: 20 # Match your engine requirement
 
       - name: Install pnpm
-        run: "npm install -g pnpm"
+        run: npm install -g pnpm
 
-      - name: Install step
-        run: "pnpm install"
+      - name: Install dependencies
+        run: pnpm install
 
-      - name: Build step
-        run: "pnpm build"
+      - name: Build Remix App
+        run: pnpm build
+        env:
+          NODE_ENV: production # Ensure production build
 
+      # Deploy to Deno Deploy using deployctl
       - name: Upload to Deno Deploy
         uses: denoland/deployctl@v1
         with:
-          project: "polarzero-nightwatch"
-          entrypoint: "https://deno.land/std@0.217.0/http/file_server.ts"
-          root: "build"
+          project: "polarzero-nightwatch" # Your Deno Deploy project name
+          entrypoint: server.production.ts # The main server script
+          root: ""
+          include: |
+            deno.json
+            deno.lock
+            build
+            package.json
+            server.production.ts

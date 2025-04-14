@@ -1,18 +1,12 @@
 import { XIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { useSearch } from "~/hooks/use-search";
-import { DbMediaType, DbMentionType, DbTweet, DbUrlType } from "~/lib/types";
-
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Button } from "./ui/button";
-import { Card, CardContent, CardHeader } from "./ui/card";
-import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "./ui/dialog";
-
-// TODO: put all with same conversation_id in a card
-// right now we can just figure out: if the tweet starts with @ (mention) (first tweet ignored), put it backwards
-// put the first tweet forward, and same for any following tweet that doesn't start with @ (probably part of the same thread)
-// later we might want to just use inReplyToUser to figure out if it's an answer to someone else but @ seems enough?
+import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar.tsx";
+import { Button } from "~/components/ui/button.tsx";
+import { Card, CardContent, CardHeader } from "~/components/ui/card.tsx";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "~/components/ui/dialog.tsx";
+import { useSearch } from "~/hooks/use-search.tsx";
+import { DbMediaType, DbMentionType, DbTweet, DbUrlType } from "~/lib/types.ts";
 
 export const Results = () => {
   const { result, query, isLoading } = useSearch();
@@ -20,16 +14,13 @@ export const Results = () => {
 
   const groupedTweets = useMemo(() => {
     // Group tweets by conversation_id (or alone if no conversation_id)
-    const grouped = result?.reduce(
-      (acc, tweet) => {
-        acc[tweet.conversation_id?.toString() || tweet.id.toString()] = [
-          ...(acc[tweet.conversation_id?.toString() || tweet.id.toString()] || []),
-          tweet,
-        ];
-        return acc;
-      },
-      {} as Record<string, DbTweet[]>,
-    );
+    const grouped = result?.reduce((acc, tweet) => {
+      acc[tweet.conversation_id?.toString() || tweet.id.toString()] = [
+        ...(acc[tweet.conversation_id?.toString() || tweet.id.toString()] || []),
+        tweet,
+      ];
+      return acc;
+    }, {}) as Record<string, Array<DbTweet>>;
 
     return Object.values(grouped || {}).sort(
       (a, b) => new Date(b[0].created_at).getTime() - new Date(a[0].created_at).getTime(),
@@ -244,13 +235,15 @@ const TweetCard = ({ tweets, query }: { tweets: DbTweet[]; query: string }) => {
               {mainTweet.medias.map((media, index) => (
                 // Use DialogTrigger wrapping a button that sets state onClick
                 <DialogTrigger key={index} asChild>
-                  <button
+                  <Button
+                    variant="ghost"
                     onClick={() => setSelectedMedia(media)} // Set media before trigger opens dialog
                     className="overflow-hidden rounded-lg max-w-[200px] cursor-pointer hover:scale-105 transition-all duration-200"
                     aria-label={`View media ${index + 1}`}
+                    asChild
                   >
                     <TweetMedia media={media} isThumbnail={true} />
-                  </button>
+                  </Button>
                 </DialogTrigger>
               ))}
             </div>
@@ -298,13 +291,14 @@ const TweetCard = ({ tweets, query }: { tweets: DbTweet[]; query: string }) => {
                     <div className="flex flex-wrap gap-2">
                       {replyTweet.medias.map((media, index) => (
                         <DialogTrigger key={index} asChild>
-                          <button
+                          <Button
+                            variant="ghost"
                             onClick={() => setSelectedMedia(media)}
                             className="overflow-hidden rounded-lg max-w-[150px] cursor-pointer hover:scale-105 transition-all duration-200"
                             aria-label={`View reply media ${index + 1}`}
                           >
                             <TweetMedia media={media} isThumbnail={true} />
-                          </button>
+                          </Button>
                         </DialogTrigger>
                       ))}
                     </div>

@@ -6,7 +6,7 @@ if (typeof globalThis.WebSocket !== "undefined") {
 }
 
 // Get the database connection string from environment variables
-const neonDatabaseUrl = process.env.NEON_DATABASE_URL;
+const neonDatabaseUrl = Deno.env.get("NEON_DATABASE_URL");
 if (!neonDatabaseUrl) throw new Error("NEON_DATABASE_URL is not set");
 
 // Create and export the SQL client

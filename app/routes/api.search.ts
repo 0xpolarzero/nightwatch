@@ -1,6 +1,6 @@
-import { type LoaderFunctionArgs } from "@remix-run/node";
+import { type LoaderFunctionArgs } from "@remix-run/deno";
 
-import { sql } from "~/lib/db.server";
+import { sql } from "~/lib/db.server.ts";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   // Get the query from URL params
@@ -55,15 +55,11 @@ export async function loader({ request }: LoaderFunctionArgs) {
     );
 
     return Response.json({ tweets: rows });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error searching tweets:", error);
-    // Log the specific SQL error details if available
-    if (error.severity && error.code) {
-      console.error(`SQL Error ${error.code} (${error.severity}): ${error.message}`);
-      if (error.detail) console.error(`Detail: ${error.detail}`);
-      if (error.hint) console.error(`Hint: ${error.hint}`);
-      if (error.where) console.error(`Where: ${error.where}`);
-    }
-    return Response.json({ tweets: [], error: error.message || "Unknown error during search" }, { status: 500 });
+    return Response.json(
+      { tweets: [], error: error instanceof Error ? error.message : "Unknown error during search" },
+      { status: 500 },
+    );
   }
 }

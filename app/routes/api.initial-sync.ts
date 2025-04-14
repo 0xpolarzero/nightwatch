@@ -1,16 +1,16 @@
-import { type ActionFunctionArgs } from "@remix-run/node";
+import { type LoaderFunctionArgs } from "@remix-run/deno";
 
-import { BATCH_SIZE } from "~/lib/constants.server";
-import { sql } from "~/lib/db.server";
-import { insertBatchTweetsAndAuthors } from "~/lib/sql.server";
-import { AdvancedSearchResponse, DbAuthor, DbMediaType, DbMentionType, DbUrlType } from "~/lib/types";
+import { BATCH_SIZE } from "~/lib/constants.server.ts";
+import { sql } from "~/lib/db.server.ts";
+import { insertBatchTweetsAndAuthors } from "~/lib/sql.server.ts";
+import { AdvancedSearchResponse } from "~/lib/types.ts";
 
-const twitterApiKey = process.env.TWITTERAPI_API_KEY;
+const twitterApiKey = Deno.env.get("TWITTERAPI_API_KEY");
 if (!twitterApiKey) throw new Error("TWITTERAPI_API_KEY is not set");
 
-export async function action({ request }: ActionFunctionArgs) {
+export async function action({ request }: LoaderFunctionArgs) {
   // Verify the request is from a cron job or has proper authorization
-  const cronSecret = process.env.CRON_SECRET;
+  const cronSecret = Deno.env.get("CRON_SECRET");
   if (!cronSecret) {
     console.error("CRON_SECRET environment variable is not set");
     return Response.json({ error: "Server configuration error" }, { status: 500 });
@@ -89,21 +89,17 @@ export async function action({ request }: ActionFunctionArgs) {
       message: "Tweets updated successfully",
       inserted: totalTweetsInserted,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating tweets:", error);
-    // Log the specific SQL error details if available
-    if (error.severity && error.code) {
-      console.error(`SQL Error ${error.code} (${error.severity}): ${error.message}`);
-      if (error.detail) console.error(`Detail: ${error.detail}`);
-      if (error.hint) console.error(`Hint: ${error.hint}`);
-      if (error.where) console.error(`Where: ${error.where}`);
-    }
-    return Response.json({ error: error.message || "Unknown error during tweet update" }, { status: 500 });
+    return Response.json(
+      { error: error instanceof Error ? error.message : "Unknown error during tweet update" },
+      { status: 500 },
+    );
   }
 }
 
 // Also support GET requests by redirecting to the action
-export async function loader({ request }: ActionFunctionArgs) {
+export function loader({ request }: LoaderFunctionArgs) {
   // For GET requests, we'll just call the action function
   if (request.method === "GET") return action({ request, params: {}, context: {} });
   return Response.json({ error: "Method not allowed" }, { status: 405 });

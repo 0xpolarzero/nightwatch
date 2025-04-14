@@ -6,13 +6,13 @@ export async function loader() {
     const dbResult = await sql`SELECT NOW() as time`;
 
     // Check if Twitter API key is configured
-    const twitterApiConfigured = Boolean(process.env.TWITTERAPI_API_KEY);
+    const twitterApiConfigured = Boolean(Deno.env.get("TWITTERAPI_API_KEY"));
 
     return Response.json({
       status: "ok",
       message: "API is healthy",
       timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || "development",
+      environment: Deno.env.get("NODE_ENV") || "development",
       checks: {
         databaseConfigured: true,
         databaseConnected: Boolean(dbResult && dbResult.length > 0),
@@ -25,9 +25,9 @@ export async function loader() {
         status: "error",
         message: error.message,
         checks: {
-          databaseConfigured: Boolean(process.env.NEON_DATABASE_URL),
+          databaseConfigured: Boolean(Deno.env.get("NEON_DATABASE_URL")),
           databaseConnected: false,
-          twitterApiConfigured: Boolean(process.env.TWITTERAPI_API_KEY),
+          twitterApiConfigured: Boolean(Deno.env.get("TWITTERAPI_API_KEY")),
         },
       },
       { status: 500 },

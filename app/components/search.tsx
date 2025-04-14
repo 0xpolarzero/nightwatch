@@ -1,8 +1,8 @@
 import { Loader2 } from "lucide-react";
 
-import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
-import { useSearch } from "~/hooks/use-search";
+import { Button } from "~/components/ui/button.tsx";
+import { Input } from "~/components/ui/input.tsx";
+import { useSearch } from "~/hooks/use-search.tsx";
 
 export const Search = () => {
   const { query, setQuery, search, isLoading } = useSearch();

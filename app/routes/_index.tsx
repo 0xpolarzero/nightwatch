@@ -1,9 +1,9 @@
-import type { MetaFunction } from "@remix-run/node";
+import type { MetaFunction } from "@remix-run/react";
 
-import { NavBar } from "~/components/nav-bar";
-import { Results } from "~/components/results";
-import { Search } from "~/components/search";
-import { SearchProvider } from "~/hooks/use-search";
+import { NavBar } from "~/components/nav-bar.tsx";
+import { Results } from "~/components/results.tsx";
+import { Search } from "~/components/search.tsx";
+import { SearchProvider } from "~/hooks/use-search.tsx";
 
 export const meta: MetaFunction = () => {
   return [
