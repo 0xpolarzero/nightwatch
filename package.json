@@ -5,14 +5,9 @@
   "type": "module",
   "scripts": {
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
-    "remix:build": "remix vite:build",
-    "remix:dev": "remix vite:dev",
-    "remix:start": "remix-serve ./build/server/index.js",
-    "sst:dev": "sst dev",
-    "sst:build": "sst build",
-    "sst:deploy": "sst deploy",
-    "sst:remove": "sst remove",
-    "sst:console": "sst console"
+    "build": "remix vite:build",
+    "dev": "remix vite:dev",
+    "start": "remix-serve ./build/server/index.js"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.0",
