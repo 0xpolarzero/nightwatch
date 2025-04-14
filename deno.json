@@ -4,6 +4,8 @@
     "lib": ["DOM", "DOM.Iterable", "ES2022", "DENO.NS"],
     "types": ["@remix-run/deno", "vite/client"],
     "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "jsxImportSourceTypes": "@types/react",
     "strict": true
   },
   "imports": {
