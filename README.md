@@ -1,10 +1,10 @@
-# Sleuth - Tweet Search Application
+# Welcome to Remix!
 
-A full-stack Next.js application for searching tweets. This project uses Next.js App Router with serverless API routes.
+- 📖 [Remix docs](https://remix.run/docs)
 
-## Architecture
+## Development
 
-This project follows a modern approach using:
+Run the dev server:
 
 - **Frontend**: Next.js with App Router
 - **API**: Next.js Route Handlers as serverless functions
@@ -148,9 +148,11 @@ Update the tweets database with the latest tweets from the configured account.
 
 ## Deployment
 
-### Setting up on Vercel
+First, build your app for production:
 
-1. Push your code to a Git repository (GitHub, GitLab, etc.)
+```sh
+npm run build
+```
 
 2. Create a new project on Vercel
 
@@ -166,13 +168,11 @@ Update the tweets database with the latest tweets from the configured account.
 
    - Vercel will build and deploy the Next.js application
 
-5. Configure the cron job
-   - The cron job is already defined in `vercel.json`
-   - It will run the `/api/update-tweets` endpoint every 6 hours
+### DIY
 
-### Architecture in Production
+If you're familiar with deploying Node applications, the built-in Remix app server is production-ready.
 
-When deployed to Vercel:
+Make sure to deploy the output of `npm run build`
 
 1. **Frontend**:
 
