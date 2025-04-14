@@ -16,7 +16,7 @@ export const Search = () => {
         placeholder="Input anything you want to look up..."
         className="min-w-[300px]"
       />
-      <Button variant="outline" className="cursor-pointer" onClick={search} disabled={isLoading || !query}>
+      <Button variant="outline" className="cursor-pointer" onClick={search} disabled={isLoading}>
         {!!isLoading && (
           <div className="flex items-center gap-2">
             <Loader2 className="animate-spin" />

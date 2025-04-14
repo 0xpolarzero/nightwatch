@@ -4,8 +4,8 @@ export default $config({
   /** Configure the application */
   app() {
     return {
-      name: "sleuth", // Your application's name
-      home: "cloudflare", // Set Cloudflare as the deployment target and state backend
+      name: "nightwatch",
+      home: "cloudflare",
       providers: {
         cloudflare: {
           apiToken: process.env.CLOUDFLARE_API_TOKEN ?? "",

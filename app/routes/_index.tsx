@@ -1,21 +1,25 @@
 import type { MetaFunction } from "@remix-run/node";
 
+import { NavBar } from "~/components/nav-bar";
 import { Results } from "~/components/results";
 import { Search } from "~/components/search";
 import { SearchProvider } from "~/hooks/use-search";
 
 export const meta: MetaFunction = () => {
-  return [{ title: "sleuth" }, { name: "description", content: "TODO_description" }];
+  return [
+    { title: "nightwatch" },
+    { name: "description", content: "A public archive of investigations into crypto scams and bad actors." },
+  ];
 };
 
 export default function Index() {
   return (
     <SearchProvider>
-      <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-        <header className="row-start-1">
-          <h1 className="text-4xl font-bold">sleuth</h1>
+      <div className="grid grid-rows-[auto_1fr_auto] items-center justify-items-center min-h-screen p-4 gap-8 max-w-[1400px] mx-auto">
+        <header>
+          <NavBar />
         </header>
-        <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
+        <main className="flex flex-col gap-2">
           <Search />
           <Results />
         </main>

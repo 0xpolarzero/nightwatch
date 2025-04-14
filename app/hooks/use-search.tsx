@@ -1,16 +1,12 @@
-import type { ApiSearchResponse, Tweet } from "~/lib/types";
 import { createContext, ReactNode, useContext, useState } from "react";
 
-// Define the shape of our search results
-export interface SearchResult {
-  tweets: Array<Tweet>;
-}
+import type { ApiSearchResponse, DbTweet } from "~/lib/types";
 
 // Define the shape of our search context
 interface SearchContextType {
   query: string;
   setQuery: (query: string) => void;
-  result: SearchResult | undefined;
+  result: Array<DbTweet> | undefined;
   isLoading: boolean;
   error: string | null;
   search: () => Promise<void>;
@@ -27,7 +23,7 @@ interface SearchProviderProps {
 
 export const SearchProvider = ({ children }: SearchProviderProps) => {
   const [query, setQuery] = useState("");
-  const [result, setResult] = useState<SearchResult | undefined>(undefined);
+  const [result, setResult] = useState<Array<DbTweet> | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,10 +39,12 @@ export const SearchProvider = ({ children }: SearchProviderProps) => {
     try {
       const response = await fetch(`/api/search?query=${encodeURIComponent(query)}`);
       const data = (await response.json()) as ApiSearchResponse;
-      setResult({
-        tweets: data.tweets.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
-      });
-      console.log(data);
+      if (data.error) {
+        setError(data.error);
+        return;
+      }
+
+      setResult(data.tweets.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()));
     } catch (err) {
       setError("Failed to perform search. Please try again.");
       console.error("Search error:", err);

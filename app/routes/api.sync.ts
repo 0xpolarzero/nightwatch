@@ -1,7 +1,9 @@
 import { type ActionFunctionArgs } from "@remix-run/node";
-import { RELEVANT_USERS } from "~/lib/constants";
+
+import { BATCH_SIZE, RELEVANT_USERS } from "~/lib/constants.server";
 import { sql } from "~/lib/db.server";
-import { AdvancedSearchResponse, Author } from "~/lib/types";
+import { insertBatchTweetsAndAuthors } from "~/lib/sql.server";
+import { AdvancedSearchResponse } from "~/lib/types";
 
 const twitterApiKey = process.env.TWITTERAPI_API_KEY;
 if (!twitterApiKey) throw new Error("TWITTERAPI_API_KEY is not set");
@@ -28,7 +30,6 @@ export async function action({ request }: ActionFunctionArgs) {
     // 2. Fetch tweets in batches and insert them into the database
     let nextCursor: string | undefined = "";
     let totalTweetsInserted = 0;
-    const BATCH_SIZE = 200;
 
     while (nextCursor !== undefined) {
       let batchTweets: AdvancedSearchResponse["tweets"] = [];
@@ -72,56 +73,8 @@ export async function action({ request }: ActionFunctionArgs) {
 
       if (batchTweets.length === 0) break;
 
-      // Process this batch of tweets
-      // 3. Insert users into the database.
-      const authors = batchTweets.reduce(
-        (acc, tweet) => {
-          acc[tweet.author.id] = {
-            id: Number(tweet.author.id),
-            username: tweet.author.userName,
-            name: tweet.author.name,
-            profile_picture_url: tweet.author.profilePicture,
-          };
-          return acc;
-        },
-        {} as Record<string, Author>,
-      );
-
-      const authorValues = Object.values(authors).map((author) => [
-        author.id,
-        author.username,
-        author.name,
-        author.profile_picture_url,
-      ]);
-
-      await sql.query(
-        `
-      INSERT INTO author (id, username, name, profile_picture_url)
-      VALUES ${authorValues.map((_, i) => `($${i * 4 + 1}, $${i * 4 + 2}, $${i * 4 + 3}, $${i * 4 + 4})`).join(",")}
-      ON CONFLICT (id) DO NOTHING`,
-        authorValues.flat(),
-      );
-
-      // 4. Insert new tweets into the database.
-      const tweetValues = batchTweets.map((tweet) => [
-        tweet.id,
-        tweet.text,
-        tweet.author.id,
-        tweet.createdAt,
-        tweet.conversationId || null,
-        tweet.url,
-      ]);
-
-      await sql.query(
-        `
-      INSERT INTO tweet (id, text, author_id, created_at, conversation_id, url)
-      VALUES ${tweetValues.map((_, i) => `($${i * 6 + 1}, $${i * 6 + 2}, $${i * 6 + 3}, $${i * 6 + 4}, $${i * 6 + 5}, $${i * 6 + 6})`).join(",")}
-      ON CONFLICT (id) DO NOTHING`,
-        tweetValues.flat(),
-      );
-
-      totalTweetsInserted += batchTweets.length;
-      console.log(`Inserted batch of ${batchTweets.length} tweets. Total: ${totalTweetsInserted}`);
+      totalTweetsInserted += await insertBatchTweetsAndAuthors(batchTweets);
+      console.log(`Inserted ${totalTweetsInserted} tweets.`);
     }
 
     if (totalTweetsInserted === 0) {

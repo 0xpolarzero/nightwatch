@@ -1,3 +1,9 @@
+Nightwatch is a public archive of investigations into crypto scams and bad actors.
+
+It collects and preserves tweets from trusted blockchain sleuths, turning volatile threads into a convenient searchable record.
+
+A ledger of exposure. A watchful memory. A stain that won't fade.
+
 # Welcome to Remix!
 
 - 📖 [Remix docs](https://remix.run/docs)
