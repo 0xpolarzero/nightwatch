@@ -4,13 +4,22 @@ import { useMemo, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { Card, CardContent, CardHeader } from "~/components/ui/card.tsx";
-import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "~/components/ui/dialog.tsx";
+import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "~/components/ui/dialog.tsx";
 import { useSearch } from "~/hooks/use-search.tsx";
 import { DbMediaType, DbMentionType, DbTweet, DbUrlType } from "~/lib/types.ts";
+import { cn } from "~/lib/utils.ts";
 
 export const Results = () => {
   const { result, query, isLoading } = useSearch();
   const memoizedQuery = useMemo(() => query, [isLoading]);
+
+  const [selectedMedia, setSelectedMedia] = useState<DbMediaType | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const handleOpenChange = (open: boolean) => {
+    setIsDialogOpen(open);
+    if (!open) setSelectedMedia(null);
+  };
 
   const groupedTweets = useMemo(() => {
     // Group tweets by conversation_id (or alone if no conversation_id)
@@ -32,16 +41,41 @@ export const Results = () => {
 
   if (!result) return null;
   return (
-    <div className="flex flex-col gap-4">
-      <p className="text-gray-500 dark:text-gray-400 text-xs">
-        {groupedTweets.length} {groupedTweets.length === 1 ? "tweet" : "tweets"} ({result.length} including replies)
-      </p>
-      <div className="flex flex-col gap-4">
-        {groupedTweets.map((tweets) => (
-          <TweetCard key={tweets[0].id} tweets={tweets} query={memoizedQuery} />
-        ))}
+    <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
+      <div className="flex flex-col gap-4 overflow-y-auto">
+        <p className="text-gray-500 dark:text-gray-400 text-xs">
+          {groupedTweets.length} {groupedTweets.length === 1 ? "tweet" : "tweets"} ({result.length} including replies)
+        </p>
+        <div className="flex flex-col gap-4">
+          {groupedTweets.map((tweets) => (
+            <TweetCard
+              key={tweets[0].id}
+              tweets={tweets}
+              query={memoizedQuery}
+              setSelectedMedia={setSelectedMedia}
+              setIsDialogOpen={setIsDialogOpen}
+            />
+          ))}
+        </div>
       </div>
-    </div>
+
+      <DialogContent
+        className="max-h-[90vh] min-h-[90vh] min-w-[90vw] bg-transparent backdrop-blur-sm"
+        closeButton={
+          <Button variant="secondary" size="icon" className="size-5 cursor-pointer">
+            <XIcon className="size-3" />
+          </Button>
+        }
+      >
+        <DialogTitle className="sr-only">Tweet Media</DialogTitle>
+        <DialogDescription className="sr-only">Tweet Media</DialogDescription>
+        {selectedMedia && (
+          <div className="flex items-center justify-center overflow-auto">
+            <TweetMedia media={selectedMedia} isThumbnail={false} />
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -134,18 +168,32 @@ const formatText = (
 };
 
 // Helper component to render media (with thumbnail option)
-const TweetMedia = ({ media, isThumbnail = false }: { media: DbMediaType; isThumbnail?: boolean }) => {
-  const commonClasses = isThumbnail ? "w-auto h-64 object-cover block" : "w-full h-auto object-cover";
+const TweetMedia = ({
+  media,
+  isThumbnail = false,
+  onClick,
+}: {
+  media: DbMediaType;
+  isThumbnail?: boolean;
+  onClick?: () => void;
+}) => {
+  const commonClasses = cn(
+    isThumbnail
+      ? "w-auto h-64 overflow-hidden object-cover block max-w-[200px] cursor-pointer hover:scale-105 transition-all duration-200"
+      : "w-auto max-h-[80vh] object-cover max-w-[1000px] ",
+  );
 
   if (media.type === "photo") {
     return (
       <img
         src={media.url}
+        aria-label="Tweet media"
         alt="Tweet media"
         className={commonClasses}
         width={media.width}
         height={media.height}
         loading="lazy"
+        onClick={onClick}
       />
     );
   }
@@ -174,7 +222,17 @@ const TweetMedia = ({ media, isThumbnail = false }: { media: DbMediaType; isThum
   return null; // Handle unknown media types if necessary
 };
 
-const TweetCard = ({ tweets, query }: { tweets: DbTweet[]; query: string }) => {
+const TweetCard = ({
+  tweets,
+  query,
+  setSelectedMedia,
+  setIsDialogOpen,
+}: {
+  tweets: DbTweet[];
+  query: string;
+  setSelectedMedia: (media: DbMediaType) => void;
+  setIsDialogOpen: (open: boolean) => void;
+}) => {
   // Ensure there's at least one tweet
   if (!tweets || tweets.length === 0) {
     return null;
@@ -182,16 +240,6 @@ const TweetCard = ({ tweets, query }: { tweets: DbTweet[]; query: string }) => {
 
   const mainTweet = tweets[0];
   const replies = tweets.slice(1);
-
-  // State for managing the single media dialog per card
-  const [selectedMedia, setSelectedMedia] = useState<DbMediaType | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-
-  // Function to handle closing the dialog and clearing the selected media
-  const handleOpenChange = (open: boolean) => {
-    setIsDialogOpen(open);
-    if (!open) setSelectedMedia(null);
-  };
 
   // Format date to be more readable
   const formatDate = (date: string) => {
@@ -202,129 +250,115 @@ const TweetCard = ({ tweets, query }: { tweets: DbTweet[]; query: string }) => {
     });
   };
 
+  // Helper function to handle media click
+  const handleMediaClick = (media: DbMediaType) => {
+    setSelectedMedia(media);
+    setIsDialogOpen(true);
+  };
+
   return (
-    // Wrap the Card and DialogContent in a single Dialog, controlled by state
-    <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
-      <Card className="gap-2">
-        {/* Header for the main tweet */}
-        <CardHeader className="flex items-center gap-3">
-          <Avatar>
-            <AvatarImage src={mainTweet.author.profile_picture_url} alt={mainTweet.author.display_name} />
-            <AvatarFallback>{mainTweet.author.display_name.charAt(0)}</AvatarFallback>
-          </Avatar>
-          <div className="flex gap-2 items-center w-full">
-            <p className="font-semibold text-gray-900 dark:text-white">{mainTweet.author.display_name}</p>
-            <p className="text-gray-500 dark:text-gray-400 text-xs">@{mainTweet.author.username}</p>
-            <p className="text-gray-500 dark:text-gray-400 text-xs">·</p>
-            <p className="text-gray-500 dark:text-gray-400 text-xs flex-1">{formatDate(mainTweet.created_at)}</p>
-            <a
-              href={mainTweet.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-link hover:underline hover:text-link-foreground text-xs font-medium cursor-pointer"
-            >
-              View on Twitter
-            </a>
-          </div>
-        </CardHeader>
+    <Card className="gap-2">
+      {/* Header for the main tweet */}
+      <CardHeader className="flex items-center gap-3">
+        <Avatar>
+          <AvatarImage src={mainTweet.author.profile_picture_url} alt={mainTweet.author.display_name} />
+          <AvatarFallback>{mainTweet.author.display_name.charAt(0)}</AvatarFallback>
+        </Avatar>
+        <div className="flex gap-2 items-center w-full">
+          <p className="font-semibold text-gray-900 dark:text-white">{mainTweet.author.display_name}</p>
+          <p className="text-gray-500 dark:text-gray-400 text-xs">@{mainTweet.author.username}</p>
+          <p className="text-gray-500 dark:text-gray-400 text-xs">·</p>
+          <p className="text-gray-500 dark:text-gray-400 text-xs flex-1">{formatDate(mainTweet.created_at)}</p>
+          <a
+            href={mainTweet.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-link hover:underline hover:text-link-foreground text-xs font-medium cursor-pointer"
+          >
+            View on Twitter
+          </a>
+        </div>
+      </CardHeader>
 
-        {/* Content: Main tweet + media + replies */}
-        <CardContent className="flex flex-col gap-4">
-          {/* Use the updated formatText function for the main tweet */}
-          {formatText(mainTweet.text, mainTweet.user_mentions, mainTweet.urls, query)}
+      {/* Content: Main tweet + media + replies */}
+      <CardContent className="flex flex-col gap-4">
+        {/* Use the updated formatText function for the main tweet */}
+        {formatText(mainTweet.text, mainTweet.user_mentions, mainTweet.urls, query)}
 
-          {/* Render Media Thumbnails for Main Tweet */}
-          {mainTweet.medias && mainTweet.medias.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {mainTweet.medias.map((media, index) => (
-                // Use DialogTrigger wrapping a button that sets state onClick
-                <DialogTrigger key={index} asChild>
-                  <Button
-                    variant="ghost"
-                    onClick={() => setSelectedMedia(media)} // Set media before trigger opens dialog
-                    className="overflow-hidden rounded-lg max-w-[200px] cursor-pointer hover:scale-105 transition-all duration-200"
-                    aria-label={`View media ${index + 1}`}
-                    asChild
-                  >
-                    <TweetMedia media={media} isThumbnail={true} />
-                  </Button>
-                </DialogTrigger>
-              ))}
-            </div>
-          )}
-
-          {/* Replies section */}
-          {replies.length > 0 && (
-            <div className="flex flex-col gap-4 border-gray-200 dark:border-gray-700 text-sm border-l pl-4">
-              {/* Indented replies */}
-              {replies.map((replyTweet) => (
-                <div key={replyTweet.id} className="flex flex-col gap-2">
-                  {" "}
-                  {/* Added gap */}
-                  {/* Reply Header */}
-                  <div className="flex flex-row items-center gap-2 text-sm">
-                    <Avatar className="size-6">
-                      {/* Smaller avatar for replies */}
-                      <AvatarImage src={replyTweet.author.profile_picture_url} alt={replyTweet.author.display_name} />
-                      <AvatarFallback>{replyTweet.author.display_name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex items-center gap-1.5 flex-1">
-                      <p className="font-medium text-gray-800 dark:text-gray-200 text-xs">
-                        {replyTweet.author.display_name}
-                      </p>
-                      <p className="text-gray-500 dark:text-gray-400 text-xs">@{replyTweet.author.username}</p>
-                      <p className="text-gray-500 dark:text-gray-400 text-xs">·</p>
-                      <p className="text-gray-500 dark:text-gray-400 text-xs flex-1">
-                        {formatDate(replyTweet.created_at)}
-                      </p>
-                      <a
-                        href={replyTweet.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-link hover:underline hover:text-link-foreground text-xs font-medium cursor-pointer"
-                      >
-                        View on Twitter
-                      </a>
-                    </div>
-                  </div>
-                  {/* Reply Content */}
-                  {formatText(replyTweet.text, replyTweet.user_mentions, replyTweet.urls, query)}
-                  {/* Render Media Thumbnails for Reply Tweet */}
-                  {replyTweet.medias && replyTweet.medias.length > 0 && (
-                    // Use flex-wrap for consistent layout
-                    <div className="flex flex-wrap gap-2">
-                      {replyTweet.medias.map((media, index) => (
-                        <DialogTrigger key={index} asChild>
-                          <Button
-                            variant="ghost"
-                            onClick={() => setSelectedMedia(media)}
-                            className="overflow-hidden rounded-lg max-w-[150px] cursor-pointer hover:scale-105 transition-all duration-200"
-                            aria-label={`View reply media ${index + 1}`}
-                          >
-                            <TweetMedia media={media} isThumbnail={true} />
-                          </Button>
-                        </DialogTrigger>
-                      ))}
-                    </div>
-                  )}
+        {/* Render Media Thumbnails for Main Tweet */}
+        {mainTweet.medias && mainTweet.medias.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {mainTweet.medias.map((media, index) => (
+              <DialogTrigger key={index} asChild>
+                <div onClick={() => handleMediaClick(media)}>
+                  <TweetMedia
+                    media={media}
+                    // deno-lint-ignore jsx-boolean-value
+                    isThumbnail={true}
+                  />
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              </DialogTrigger>
+            ))}
+          </div>
+        )}
 
-      <DialogContent
-        className="max-w-fit max-h-[95vh] overflow-auto p-0 border-none bg-transparent"
-        closeButton={
-          <Button variant="secondary" size="icon" className="size-5 cursor-pointer">
-            <XIcon className="size-3" />
-          </Button>
-        }
-      >
-        <DialogTitle className="sr-only">Tweet Media</DialogTitle>
-        {selectedMedia && <TweetMedia media={selectedMedia} isThumbnail={false} />}
-      </DialogContent>
-    </Dialog>
+        {/* Replies section */}
+        {replies.length > 0 && (
+          <div className="flex flex-col gap-4 border-gray-200 dark:border-gray-700 text-sm border-l pl-4">
+            {/* Indented replies */}
+            {replies.map((replyTweet) => (
+              <div key={replyTweet.id} className="flex flex-col gap-2">
+                {" "}
+                {/* Added gap */}
+                {/* Reply Header */}
+                <div className="flex flex-row items-center gap-2 text-sm">
+                  <Avatar className="size-6">
+                    {/* Smaller avatar for replies */}
+                    <AvatarImage src={replyTweet.author.profile_picture_url} alt={replyTweet.author.display_name} />
+                    <AvatarFallback>{replyTweet.author.display_name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex items-center gap-1.5 flex-1">
+                    <p className="font-medium text-gray-800 dark:text-gray-200 text-xs">
+                      {replyTweet.author.display_name}
+                    </p>
+                    <p className="text-gray-500 dark:text-gray-400 text-xs">@{replyTweet.author.username}</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-xs">·</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-xs flex-1">
+                      {formatDate(replyTweet.created_at)}
+                    </p>
+                    <a
+                      href={replyTweet.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-link hover:underline hover:text-link-foreground text-xs font-medium cursor-pointer"
+                    >
+                      View on Twitter
+                    </a>
+                  </div>
+                </div>
+                {/* Reply Content */}
+                {formatText(replyTweet.text, replyTweet.user_mentions, replyTweet.urls, query)}
+                {/* Render Media Thumbnails for Reply Tweet */}
+                {replyTweet.medias && replyTweet.medias.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {replyTweet.medias.map((media, index) => (
+                      <DialogTrigger key={index} asChild>
+                        <div onClick={() => handleMediaClick(media)}>
+                          <TweetMedia
+                            media={media}
+                            // deno-lint-ignore jsx-boolean-value
+                            isThumbnail={true}
+                          />
+                        </div>
+                      </DialogTrigger>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };

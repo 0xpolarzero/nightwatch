@@ -7,8 +7,13 @@ import { useSearch } from "~/hooks/use-search.tsx";
 export const Search = () => {
   const { query, setQuery, search, isLoading } = useSearch();
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    search();
+  };
+
   return (
-    <div className="flex gap-4">
+    <form onSubmit={handleSubmit} className="flex gap-4">
       <Input
         type="search"
         value={query}
@@ -16,7 +21,7 @@ export const Search = () => {
         placeholder="Input anything you want to look up..."
         className="min-w-[300px]"
       />
-      <Button variant="outline" className="cursor-pointer" onClick={search} disabled={isLoading}>
+      <Button type="submit" variant="outline" className="cursor-pointer" onClick={search} disabled={isLoading}>
         {!!isLoading && (
           <div className="flex items-center gap-2">
             <Loader2 className="animate-spin" />
@@ -25,6 +30,6 @@ export const Search = () => {
         )}
         {!isLoading && "Search"}
       </Button>
-    </div>
+    </form>
   );
 };
