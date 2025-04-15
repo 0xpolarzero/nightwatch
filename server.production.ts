@@ -2,6 +2,8 @@ import { createRequestHandler } from "@remix-run/server-runtime";
 import { serveFile } from "@std/http/file-server";
 import { join } from "@std/path/join";
 
+import { CRON_SCHEDULE } from "~/lib/constants.server.ts";
+
 const handleRequest = createRequestHandler(
   // @ts-ignore - not compatible
   await import("./build/server/index.js"),
@@ -40,7 +42,7 @@ export default {
 } satisfies Deno.ServeDefaultExport;
 
 /* ---------------------------------- CRON ---------------------------------- */
-Deno.cron("Sync tweets", { hour: { every: 6 } }, async () => {
+Deno.cron("Sync tweets", CRON_SCHEDULE, async () => {
   console.log("Running scheduled tweets sync...");
   const response = await fetch(`http://localhost:${Deno.env.get("PORT") ?? "8000"}/api/sync`, {
     method: "POST",

@@ -1,230 +1,200 @@
-Nightwatch is a public archive of investigations into crypto scams and bad actors.
+# Nightwatch
 
-It collects and preserves tweets from trusted blockchain sleuths, turning volatile threads into a convenient searchable record.
+**A public archive of investigations into crypto scams and bad actors.**
+
+Nightwatch collects and preserves tweets from trusted blockchain sleuths, turning volatile threads into a convenient searchable record.
 
 A ledger of exposure. A watchful memory. A stain that won't fade.
 
-# Welcome to Remix!
+## Table of Contents
 
-- 📖 [Remix docs](https://remix.run/docs)
+- [Introduction](#introduction)
+  - [Overview](#overview)
+  - [Key Features](#key-features)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Development](#development)
+  - [Deployment](#deployment)
+- [Architecture](#architecture)
+  - [Data Flow](#data-flow)
+  - [API Endpoints](#api-endpoints)
+  - [Database Schema](#database-schema)
+- [Technical Details](#technical-details)
+  - [Twitter API Integration](#twitter-api-integration)
+  - [Caching Strategy](#caching-strategy)
+  - [Scheduled Jobs](#scheduled-jobs)
+- [Contributing](#contributing)
+- [License](#license)
 
-## Development
+## Introduction
 
-Run the dev server:
+### Overview
 
-- **Frontend**: Next.js with App Router
-- **API**: Next.js Route Handlers as serverless functions
-- **Database**: Neon PostgreSQL serverless database
+Nightwatch serves as a permanent archive for investigations conducted by trusted blockchain investigators like @zachxbt.
+
+The application indexes tweets from selected accounts, along with media attachments, and metadata. This creates a reliable reference point to research potential scams and bad actors, with an easily searchable interface with reliable results curated by essence.
 
 ### Key Features
 
-- Next.js frontend for searching tweets
-- Serverless API routes that protect sensitive environment variables
-- Scheduled cron job to update tweets database (every 6 hours)
-- Local development environment that mirrors production
+- **Permanent Archive**: Tweets are stored in a database, ensuring they remain accessible even if deleted from Twitter
+- **Full-Text Search**: Search through the entire archive using keywords
+- **Conversation Context**: View entire threads and replies from relevant accounts
+- **Media Preservation**: Images and other media attached to tweets are preserved and viewable
+- **Regular Updates**: Automatic synchronization with Twitter to capture new content
 
-## Local Development
+## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+ and pnpm
-- A Neon PostgreSQL database
-- Twitter API credentials
+- [Deno](https://deno.com/) (v1.37 or higher)
+- [Node.js](https://nodejs.org/) (v20 or higher)
+- [pnpm](https://pnpm.io/) (v8 or higher)
+- A [Neon](https://neon.tech/) PostgreSQL database
+- A [TwitterAPI.io](https://twitterapi.io/) API key
 
-### Setup
+### Installation
 
-1. Clone the repository
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/polareth/nightwatch.git
+   cd nightwatch
+   ```
+
 2. Install dependencies:
 
    ```bash
    pnpm install
    ```
 
-3. Create a `.env.local` file in the root directory with your environment variables:
-
+3. Set up environment variables:
    ```
-   NEON_DATABASE_URL=your_neon_database_url
-   TWITTERAPI_API_KEY=your_twitter_api_key
-   ```
-
-4. Set up your database schema:
-
-   ```sql
-   CREATE TABLE author (
-     id TEXT PRIMARY KEY,
-     username TEXT NOT NULL,
-     name TEXT NOT NULL,
-     profile_picture_url TEXT
-   );
-
-   CREATE TABLE tweet (
-     id TEXT PRIMARY KEY,
-     text TEXT NOT NULL,
-     author_id TEXT NOT NULL REFERENCES author(id),
-     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-     is_reply_to_id TEXT,
-     url TEXT NOT NULL,
-     FOREIGN KEY (is_reply_to_id) REFERENCES tweet(id)
-   );
-
-   CREATE INDEX tweet_author_id_idx ON tweet(author_id);
-   CREATE INDEX tweet_created_at_idx ON tweet(created_at);
-   CREATE INDEX tweet_text_idx ON tweet USING gin (to_tsvector('english', text));
+   NEON_DATABASE_URL=your_neon_postgres_connection_string
+   TWITTERAPI_API_KEY=your_twitterapi_io_key
+   CRON_SECRET=your_secret_for_cron_jobs
    ```
 
-5. Start the development server:
+### Development
+
+Run the development server:
+
+```bash
+pnpm dev
+```
+
+The application will be available at http://localhost:5173.
+
+### Deployment
+
+Nightwatch is designed to be deployed on [Deno Deploy](https://deno.com/deploy). The repository includes a GitHub Actions workflow for automatic deployment.
+
+1. Build the application:
+
    ```bash
-   pnpm dev
+   pnpm build
    ```
 
-This will run the Next.js development server which includes:
+2. Deploy manually (if not using GitHub Actions):
+   ```bash
+   pnpm deploy
+   ```
 
-- The Next.js frontend application
-- The API routes in the `/app/api` directory
-- Environment variables from `.env.local`
+## Architecture
 
-### Testing Locally
+### Data Flow
 
-- Frontend is available at: http://localhost:3000
-- API endpoints:
-  - http://localhost:3000/api/health - Check API and database status
-  - http://localhost:3000/api/search-tweets?query=yourquery - Search for tweets
-  - http://localhost:3000/api/update-tweets - Manually update tweets database
+1. **Data Collection**: Tweets from specified accounts are fetched from [TwitterAPI.io](https://twitterapi.io/)
+2. **Data Processing**: Tweets are parsed and normalized, extracting mentions, URLs, and media
+3. **Data Storage**: Processed tweets are stored in a [Neon](https://neon.tech/) database
+4. **Data Retrieval**: Users query the database through the search interface
+5. **Data Presentation**: Results are displayed with highlighting and context
 
-## API Endpoints
+### API Endpoints
 
-### GET /api/health
+- **`/api/search`**: Search for tweets matching a query
+- **`/api/sync`**: Trigger a synchronization with Twitter (protected by auth)
+- **`/api/initial-sync`**: Perform initial backfill for a specific user (protected by auth)
+- **`/api/health`**: Check the health of the application and its dependencies
 
-Check the health of the API and its connections.
+### Database Schema
 
-**Response:**
+The database uses two main tables:
 
-```json
-{
-  "status": "ok",
-  "message": "API is healthy",
-  "timestamp": "2023-04-13T12:34:56.789Z",
-  "environment": "development",
-  "checks": {
-    "databaseConfigured": true,
-    "databaseConnected": true,
-    "twitterApiConfigured": true
-  }
-}
+1. **`authors`**: Stores information about tweet authors
+
+   - `id`: Unique identifier (Twitter user ID)
+   - `username`: Twitter handle
+   - `display_name`: Display name
+   - `profile_picture_url`: URL to profile picture
+   - `followers`: Follower count
+   - `following`: Following count
+   - `profile_bio`: JSON object containing bio information
+
+2. **`tweets`**: Stores the tweets themselves
+   - `id`: Unique identifier (Twitter tweet ID)
+   - `url`: URL to the original tweet
+   - `text`: Tweet content
+   - `author_id`: Foreign key to authors table
+   - `conversation_id`: ID of the conversation thread
+   - `created_at`: Timestamp of tweet creation
+   - `user_mentions`: Array of mentioned users
+   - `urls`: Array of URLs in the tweet
+   - `medias`: Array of media attachments
+
+You can directly use [the reference SQL schema](./resources/init.sql) to create the database.
+
+## Technical Details
+
+### Twitter API Integration
+
+Nightwatch uses [TwitterAPI.io](https://twitterapi.io/) to fetch tweets through their advanced search endpoint. The application implements:
+
+- **Batch Processing**: Tweets are fetched and processed in batches
+- **Cursor-based Pagination**: For handling large result sets
+- **Differential Updates**: Only fetching tweets newer than the most recent one in the database
+
+You can manually trigger a sync with the `/api/sync` endpoint.
+
+```bash
+curl -X POST "http://localhost:5173/api/sync" -H "Content-Type: application/json" -H "Authorization: Bearer $CRON_SECRET" # this uses localhost but it could be the deployed endpoint
 ```
 
-### GET /api/search-tweets?query={searchTerm}
+Or run a full sync for a new user:
 
-Search for tweets containing the specified query text.
-
-**Parameters:**
-
-- `query` (required): Text to search for in tweets
-
-**Response:**
-
-```json
-{
-  "tweets": [
-    {
-      "id": "1234567890",
-      "text": "This is a tweet containing your search term",
-      "created_at": "2023-04-13T12:34:56.789Z",
-      "author_id": "user123",
-      "reply_to_id": null,
-      "username": "twitteruser",
-      "name": "Twitter User"
-    }
-  ]
-}
+```bash
+curl -X POST "http://localhost:5173/api/initial-sync?username=zachxbt" -H "Content-Type: application/json" -H "Authorization: Bearer $CRON_SECRET"
 ```
 
-### GET or POST /api/update-tweets
+You can customize the relevant users in [constants.server.ts](./app/lib/constants.server.ts) at `RELEVANT_USERS`. Same for the `BATCH_SIZE`.
 
-Update the tweets database with the latest tweets from the configured account.
+### Caching Strategy
 
-**Response:**
+The application implements a caching strategy to improve performance and reduce API calls:
 
-```json
-{
-  "message": "Tweets updated successfully",
-  "inserted": 10
-}
-```
+- **Search Results Caching**: Search results are cached for 1 hour
 
-## Deployment
+You can customize the cache TTL in [constants.server.ts](./app/lib/constants.server.ts) at `CACHE_TTL`.
 
-First, build your app for production:
+### Scheduled Jobs
 
-```sh
-npm run build
-```
+Nightwatch uses Deno's built-in cron functionality to schedule regular updates:
 
-2. Create a new project on Vercel
+- **Tweet Synchronization**: Runs every 6 hours to fetch new tweets
+- **Authentication**: Jobs are protected by a secret token to prevent unauthorized access
 
-   - Connect your Git repository
-   - Vercel will automatically detect the Next.js configuration
+You can customize the cron schedule in [constants.server.ts](./app/lib/constants.server.ts) at `CRON_SCHEDULE`.
 
-3. Configure environment variables in the Vercel dashboard:
+## Contributing
 
-   - Add `NEON_DATABASE_URL`
-   - Add `TWITTERAPI_API_KEY`
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-4. Deploy the application
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-   - Vercel will build and deploy the Next.js application
+## License
 
-### DIY
-
-If you're familiar with deploying Node applications, the built-in Remix app server is production-ready.
-
-Make sure to deploy the output of `npm run build`
-
-1. **Frontend**:
-
-   - Static assets are served from Vercel's global CDN
-   - Server components are rendered at the edge or on Vercel's serverless functions
-
-2. **API**:
-
-   - API routes are deployed as serverless functions
-   - Each route can scale independently
-   - Environment variables are securely stored on Vercel
-
-3. **Cron Jobs**:
-   - The `update-tweets` endpoint is automatically called on the schedule defined in `vercel.json`
-   - This keeps your database updated with the latest tweets
-
-## Best Practices Followed
-
-- **Security**:
-
-  - API keys and database credentials are never exposed to the client
-  - Environment variables are properly secured
-  - Parameterized SQL queries to prevent SQL injection
-
-- **Architecture**:
-
-  - Next.js App Router for modern React features
-  - Server Components for improved performance
-  - Serverless approach for easy scaling and maintenance
-  - Database connections are handled efficiently with Neon's serverless approach
-
-- **Development Workflow**:
-  - Local development that mirrors production environment
-  - TypeScript for type safety throughout the application
-  - Shared database connection handling
-
-## Debugging
-
-- For local API issues, check the console output from `pnpm dev`
-- For database issues, check your Neon console
-- For deployment issues, check the Vercel deployment logs
-- Use the `/api/health` endpoint to verify connections
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Route Handlers Documentation](https://nextjs.org/docs/app/building-your-application/routing/route-handlers) - learn about Next.js API routes.
+This project is licensed under the MIT License - see the LICENSE file for details.

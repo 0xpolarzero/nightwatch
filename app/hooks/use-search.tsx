@@ -1,6 +1,6 @@
 import { createContext, ReactNode, useContext, useState } from "react";
 
-import type { ApiSearchResponse, DbTweet } from "~/lib/types";
+import type { ApiSearchResponse, DbTweet } from "~/lib/types.ts";
 
 // Define the shape of our search context
 interface SearchContextType {

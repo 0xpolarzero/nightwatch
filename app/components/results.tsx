@@ -14,13 +14,16 @@ export const Results = () => {
 
   const groupedTweets = useMemo(() => {
     // Group tweets by conversation_id (or alone if no conversation_id)
-    const grouped = result?.reduce((acc, tweet) => {
-      acc[tweet.conversation_id?.toString() || tweet.id.toString()] = [
-        ...(acc[tweet.conversation_id?.toString() || tweet.id.toString()] || []),
-        tweet,
-      ];
-      return acc;
-    }, {}) as Record<string, Array<DbTweet>>;
+    const grouped = result?.reduce(
+      (acc, tweet) => {
+        acc[tweet.conversation_id?.toString() || tweet.id.toString()] = [
+          ...(acc[tweet.conversation_id?.toString() || tweet.id.toString()] || []),
+          tweet,
+        ];
+        return acc;
+      },
+      {} as Record<string, Array<DbTweet>>,
+    );
 
     return Object.values(grouped || {}).sort(
       (a, b) => new Date(b[0].created_at).getTime() - new Date(a[0].created_at).getTime(),
