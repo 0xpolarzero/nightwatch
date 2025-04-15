@@ -4,7 +4,7 @@ export const NavBar = () => {
   return (
     <div className="flex justify-between p-4 items-center h-12 w-full">
       <div className="flex items-center gap-4">
-        <img src="/logo.png" alt="nightwatch" className="size-6" />
+        <img src="/logo-white.png" alt="nightwatch" className="size-6" />
         <span className="font-semibold">nightwatch</span>
       </div>
       <div className="flex items-center gap-4">

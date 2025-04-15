@@ -2,7 +2,7 @@
 
 **A public archive of investigations into crypto scams and bad actors.**
 
-![Nightwatch](./resources/logo_full.png)
+![Nightwatch](./public/logo-white.png)
 
 Nightwatch collects and preserves tweets from trusted blockchain sleuths, turning volatile threads into a convenient searchable record.
 

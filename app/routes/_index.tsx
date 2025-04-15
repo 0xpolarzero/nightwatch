@@ -10,6 +10,19 @@ export const meta: MetaFunction = () => {
   return [
     { title: "nightwatch" },
     { name: "description", content: "A public archive of investigations into crypto scams and bad actors." },
+
+    // Open Graph
+    { property: "og:title", content: "nightwatch" },
+    { property: "og:description", content: "A public archive of investigations into crypto scams and bad actors." },
+    { property: "og:image", content: "https://nightwatch.polareth.org/og-image.png" },
+    { property: "og:url", content: "https://nightwatch.polareth.org" },
+    { property: "og:type", content: "website" },
+
+    // Twitter Card
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:title", content: "nightwatch" },
+    { name: "twitter:description", content: "A public archive of investigations into crypto scams and bad actors." },
+    { name: "twitter:image", content: "https://nightwatch.polareth.org/og-image.png" },
   ];
 };
 
