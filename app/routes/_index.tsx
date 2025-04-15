@@ -3,6 +3,7 @@ import type { MetaFunction } from "@remix-run/react";
 import { NavBar } from "~/components/nav-bar.tsx";
 import { Results } from "~/components/results.tsx";
 import { Search } from "~/components/search.tsx";
+import { ScrollArea } from "~/components/ui/scroll-area.tsx";
 import { SearchProvider } from "~/hooks/use-search.tsx";
 
 export const meta: MetaFunction = () => {
@@ -15,15 +16,19 @@ export const meta: MetaFunction = () => {
 export default function Index() {
   return (
     <SearchProvider>
-      <div className="grid grid-rows-[auto_1fr_auto] items-center justify-items-center min-h-screen p-4 gap-8 max-w-[1400px] mx-auto">
-        <header>
+      <div className="flex flex-col items-center justify-items-center min-h-screen max-h-screen max-w-[1400px] mx-auto">
+        <header className="w-full">
           <NavBar />
         </header>
-        <main className="flex flex-col gap-2">
+        <main className="flex flex-col gap-2 p-4 overflow-hidden flex-1 w-full">
           <Search />
-          <Results />
+          <div className="overflow-y-auto h-auto">
+            <ScrollArea className="h-auto">
+              <Results />
+            </ScrollArea>
+          </div>
         </main>
-        <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center"></footer>
+        <footer />
       </div>
     </SearchProvider>
   );

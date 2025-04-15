@@ -49,6 +49,9 @@ const formatText = (
   urls: DbUrlType[] | null | undefined,
   query: string,
 ): JSX.Element => {
+  // Decode HTML entities like &amp; to & before processing
+  const decodedText = text.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+
   // 1. Combine and sort entities (mentions and URLs) by start index
   const entities: (DbMentionType | DbUrlType)[] = [...(mentions || []), ...(urls || [])].sort(
     (a, b) => a.start_index - b.start_index,
@@ -61,7 +64,7 @@ const formatText = (
   entities.forEach((entity, i) => {
     // Add text segment before the entity
     if (entity.start_index > lastIndex) {
-      nodes.push(text.substring(lastIndex, entity.start_index));
+      nodes.push(decodedText.substring(lastIndex, entity.start_index));
     }
 
     // Add the entity link
@@ -75,7 +78,7 @@ const formatText = (
           rel="noopener noreferrer"
           className="text-link hover:underline hover:text-link-foreground"
         >
-          {text.substring(entity.start_index, entity.end_index)}
+          {decodedText.substring(entity.start_index, entity.end_index)}
         </a>,
       );
     } else {
@@ -96,9 +99,7 @@ const formatText = (
   });
 
   // Add remaining text after the last entity
-  if (lastIndex < text.length) {
-    nodes.push(text.substring(lastIndex));
-  }
+  if (lastIndex < decodedText.length) nodes.push(decodedText.substring(lastIndex));
 
   // 3. Apply query highlighting to string nodes
   const finalNodes: (string | JSX.Element)[] = [];
