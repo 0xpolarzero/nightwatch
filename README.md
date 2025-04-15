@@ -183,7 +183,7 @@ Nightwatch uses Deno's built-in cron functionality to schedule regular updates:
 - **Tweet Synchronization**: Runs every 6 hours to fetch new tweets
 - **Authentication**: Jobs are protected by a secret token to prevent unauthorized access
 
-You can customize the cron schedule in [constants.server.ts](./app/lib/constants.server.ts) at `CRON_SCHEDULE`.
+You can customize the cron schedule directly in [server.production.ts](./server.production.ts).
 
 ## Contributing
 
