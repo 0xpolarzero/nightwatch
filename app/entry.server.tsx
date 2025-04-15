@@ -3,7 +3,7 @@ import type { /* AppLoadContext, */ EntryContext } from "@remix-run/server-runti
 import { isbot } from "isbot";
 import { renderToReadableStream } from "react-dom/server.browser";
 
-const ABORT_DELAY = 5000;
+import { ABORT_DELAY } from "~/lib/constants.server.ts";
 
 export default async function handleRequest(
   request: Request,

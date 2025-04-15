@@ -3,7 +3,7 @@ import { serveFile } from "@std/http/file-server";
 import { join } from "@std/path/join";
 
 const handleRequest = createRequestHandler(
-  // eslint-disable-next-line import/no-unresolved
+  // @ts-ignore - not compatible
   await import("./build/server/index.js"),
   "production",
 );
@@ -38,3 +38,23 @@ export default {
     return handleRequest(request);
   },
 } satisfies Deno.ServeDefaultExport;
+
+/* ---------------------------------- CRON ---------------------------------- */
+Deno.cron("Sync tweets", { hour: { every: 6 } }, async () => {
+  console.log("Running scheduled tweets sync...");
+  const response = await fetch(`http://localhost:${Deno.env.get("PORT") ?? "8000"}/api/sync`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${Deno.env.get("CRON_SECRET")}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`Cron job failed: ${response.status} ${response.statusText}. Response: ${errorText}`);
+  } else {
+    const result = await response.json();
+    console.log("Cron job completed successfully:", result);
+  }
+});

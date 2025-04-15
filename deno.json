@@ -1,7 +1,7 @@
 {
   "include": ["**/*.ts", "**/*.tsx"],
   "compilerOptions": {
-    "lib": ["DOM", "DOM.Iterable", "ES2022", "DENO.NS"],
+    "lib": ["DOM", "DOM.Iterable", "ES2022", "DENO.NS", "DENO.UNSTABLE"],
     "types": ["@remix-run/deno", "vite/client"],
     "jsx": "react-jsx",
     "jsxImportSource": "react",
