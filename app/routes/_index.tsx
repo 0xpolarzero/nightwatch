@@ -3,6 +3,7 @@ import type { MetaFunction } from "@remix-run/react";
 import { NavBar } from "~/components/nav-bar.tsx";
 import { Results } from "~/components/results.tsx";
 import { Search } from "~/components/search.tsx";
+import { TooltipProvider } from "~/components/ui/tooltip.tsx";
 import { SearchProvider } from "~/hooks/use-search.tsx";
 
 export const meta: MetaFunction = () => {
@@ -34,7 +35,9 @@ export default function Index() {
         </header>
         <main className="flex flex-col gap-2 p-4 overflow-hidden flex-1 w-full">
           <Search />
-          <Results />
+          <TooltipProvider>
+            <Results />
+          </TooltipProvider>
         </main>
       </div>
     </SearchProvider>

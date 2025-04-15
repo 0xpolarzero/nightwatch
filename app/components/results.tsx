@@ -5,8 +5,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar.tsx"
 import { Button } from "~/components/ui/button.tsx";
 import { Card, CardContent, CardHeader } from "~/components/ui/card.tsx";
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "~/components/ui/dialog.tsx";
+import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip.tsx";
 import { useSearch } from "~/hooks/use-search.tsx";
-import { DbMediaType, DbMentionType, DbTweet, DbUrlType } from "~/lib/types.ts";
+import { DbAuthor, DbMediaType, DbMentionType, DbTweet, DbUrlType } from "~/lib/types.ts";
 import { cn } from "~/lib/utils.ts";
 
 export const Results = () => {
@@ -222,6 +223,103 @@ const TweetMedia = ({
   return null; // Handle unknown media types if necessary
 };
 
+// New reusable component for tweet headers
+const TweetHeader = ({
+  author,
+  createdAt,
+  url,
+  isReply = false,
+}: {
+  author: DbAuthor;
+  createdAt: string;
+  url: string;
+  isReply?: boolean;
+}) => {
+  // Format date to be more readable
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  return (
+    <Tooltip>
+      <div className={`flex items-center ${isReply ? "gap-2 text-sm" : "gap-3"}`}>
+        <TooltipTrigger className="cursor-pointer" asChild>
+          <Avatar className={cn(isReply && "size-6")}>
+            <AvatarImage src={author.profile_picture_url} alt={author.display_name} />
+            <AvatarFallback>{author.display_name.charAt(0)}</AvatarFallback>
+          </Avatar>
+        </TooltipTrigger>
+        <div className="flex gap-1.5 items-center w-full">
+          <TooltipTrigger className="cursor-pointer" asChild>
+            <p
+              className={`${isReply ? "text-xs" : ""} font-${isReply ? "medium" : "semibold"} text-gray-${isReply ? "800" : "900"} dark:text-${isReply ? "gray-200" : "white"}`}
+            >
+              {author.display_name}
+            </p>
+          </TooltipTrigger>
+          <TooltipTrigger className="cursor-pointer" asChild>
+            <p className="text-gray-500 dark:text-gray-400 text-xs">@{author.username}</p>
+          </TooltipTrigger>
+          <p className="text-gray-500 dark:text-gray-400 text-xs">·</p>
+          <p className="text-gray-500 dark:text-gray-400 text-xs flex-1">{formatDate(createdAt)}</p>
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-link hover:underline hover:text-link-foreground text-xs font-medium cursor-pointer"
+          >
+            View on Twitter
+          </a>
+        </div>
+      </div>
+      <TooltipContent className="bg-background border-1 border-gray-200 dark:border-gray-700 rounded-sm">
+        <TwitterProfileCard author={author} />
+      </TooltipContent>
+    </Tooltip>
+  );
+};
+
+const TwitterProfileCard = ({ author }: { author: DbAuthor }) => {
+  return (
+    <div className="flex flex-col gap-3 p-2 max-w-[300px]">
+      {/* Header with avatar and follow counts */}
+      <div className="flex items-center gap-3">
+        <Avatar className="size-8">
+          <AvatarImage src={author.profile_picture_url} alt={author.display_name} />
+          <AvatarFallback>{author.display_name.charAt(0)}</AvatarFallback>
+        </Avatar>
+        <div className="flex flex-col">
+          <p className="font-bold text-gray-900 dark:text-gray-200 text-sm">{author.display_name}</p>
+          <p className="text-gray-500 dark:text-gray-400 text-xs">@{author.username}</p>
+        </div>
+      </div>
+
+      {/* Bio description */}
+      {author.profile_bio?.description && (
+        <p className="text-sm">
+          {formatText(author.profile_bio.description, author.profile_bio.user_mentions, author.profile_bio.urls, "")}
+        </p>
+      )}
+
+      {/* Stats */}
+      <div className="flex gap-4 text-sm">
+        <div className="flex gap-1">
+          <span className="font-semibold text-gray-900 dark:text-gray-200">{author.following.toLocaleString()}</span>
+          <span className="text-gray-500 dark:text-gray-400">Following</span>
+        </div>
+        <div className="flex gap-1">
+          <span className="font-semibold text-gray-900 dark:text-gray-200">{author.followers.toLocaleString()}</span>
+          <span className="text-gray-500 dark:text-gray-400">Followers</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const TweetCard = ({
   tweets,
   query,
@@ -234,21 +332,10 @@ const TweetCard = ({
   setIsDialogOpen: (open: boolean) => void;
 }) => {
   // Ensure there's at least one tweet
-  if (!tweets || tweets.length === 0) {
-    return null;
-  }
+  if (!tweets || tweets.length === 0) return null;
 
   const mainTweet = tweets[0];
   const replies = tweets.slice(1);
-
-  // Format date to be more readable
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
 
   // Helper function to handle media click
   const handleMediaClick = (media: DbMediaType) => {
@@ -259,25 +346,8 @@ const TweetCard = ({
   return (
     <Card className="gap-2">
       {/* Header for the main tweet */}
-      <CardHeader className="flex items-center gap-3">
-        <Avatar>
-          <AvatarImage src={mainTweet.author.profile_picture_url} alt={mainTweet.author.display_name} />
-          <AvatarFallback>{mainTweet.author.display_name.charAt(0)}</AvatarFallback>
-        </Avatar>
-        <div className="flex gap-2 items-center w-full">
-          <p className="font-semibold text-gray-900 dark:text-white">{mainTweet.author.display_name}</p>
-          <p className="text-gray-500 dark:text-gray-400 text-xs">@{mainTweet.author.username}</p>
-          <p className="text-gray-500 dark:text-gray-400 text-xs">·</p>
-          <p className="text-gray-500 dark:text-gray-400 text-xs flex-1">{formatDate(mainTweet.created_at)}</p>
-          <a
-            href={mainTweet.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-link hover:underline hover:text-link-foreground text-xs font-medium cursor-pointer"
-          >
-            View on Twitter
-          </a>
-        </div>
+      <CardHeader>
+        <TweetHeader author={mainTweet.author} createdAt={mainTweet.created_at} url={mainTweet.url} />
       </CardHeader>
 
       {/* Content: Main tweet + media + replies */}
@@ -308,36 +378,18 @@ const TweetCard = ({
             {/* Indented replies */}
             {replies.map((replyTweet) => (
               <div key={replyTweet.id} className="flex flex-col gap-2">
-                {" "}
-                {/* Added gap */}
                 {/* Reply Header */}
-                <div className="flex flex-row items-center gap-2 text-sm">
-                  <Avatar className="size-6">
-                    {/* Smaller avatar for replies */}
-                    <AvatarImage src={replyTweet.author.profile_picture_url} alt={replyTweet.author.display_name} />
-                    <AvatarFallback>{replyTweet.author.display_name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex items-center gap-1.5 flex-1">
-                    <p className="font-medium text-gray-800 dark:text-gray-200 text-xs">
-                      {replyTweet.author.display_name}
-                    </p>
-                    <p className="text-gray-500 dark:text-gray-400 text-xs">@{replyTweet.author.username}</p>
-                    <p className="text-gray-500 dark:text-gray-400 text-xs">·</p>
-                    <p className="text-gray-500 dark:text-gray-400 text-xs flex-1">
-                      {formatDate(replyTweet.created_at)}
-                    </p>
-                    <a
-                      href={replyTweet.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-link hover:underline hover:text-link-foreground text-xs font-medium cursor-pointer"
-                    >
-                      View on Twitter
-                    </a>
-                  </div>
-                </div>
+                <TweetHeader
+                  author={replyTweet.author}
+                  createdAt={replyTweet.created_at}
+                  url={replyTweet.url}
+                  // deno-lint-ignore jsx-boolean-value
+                  isReply={true}
+                />
+
                 {/* Reply Content */}
                 {formatText(replyTweet.text, replyTweet.user_mentions, replyTweet.urls, query)}
+
                 {/* Render Media Thumbnails for Reply Tweet */}
                 {replyTweet.medias && replyTweet.medias.length > 0 && (
                   <div className="flex flex-wrap gap-2">
