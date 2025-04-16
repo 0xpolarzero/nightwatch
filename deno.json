@@ -1,8 +1,20 @@
 {
-  "include": ["**/*.ts", "**/*.tsx"],
+  "include": [
+    "**/*.ts",
+    "**/*.tsx"
+  ],
   "compilerOptions": {
-    "lib": ["DOM", "DOM.Iterable", "ES2022", "DENO.NS", "DENO.UNSTABLE"],
-    "types": ["@remix-run/deno", "vite/client"],
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ES2022",
+      "DENO.NS",
+      "DENO.UNSTABLE"
+    ],
+    "types": [
+      "@remix-run/deno",
+      "vite/client"
+    ],
     "jsx": "react-jsx",
     "jsxImportSource": "react",
     "jsxImportSourceTypes": "@types/react",
@@ -13,5 +25,19 @@
     "@std/path": "jsr:@std/path@^1.0.8",
     "@std/text": "jsr:@std/text@^1.0.8",
     "~/": "./app/"
+  },
+  "deploy": {
+    "project": "fbaf3ab5-fe01-4452-b319-d4cfa374c5e0",
+    "exclude": [
+      "**/node_modules"
+    ],
+    "include": [
+      "deno.json",
+      "deno.lock",
+      "build",
+      "package.json",
+      "server"
+    ],
+    "entrypoint": "server.production.ts"
   }
 }

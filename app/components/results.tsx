@@ -587,7 +587,6 @@ const TelegramMessageCard = ({ messages, query }: { messages: DbTelegramMessage[
 
   const mainMessage = messages[0];
   const replies = messages.slice(1);
-  console.log(mainMessage);
 
   return (
     <Card className="gap-2">
