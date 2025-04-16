@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar.tsx"
 import { Button } from "~/components/ui/button.tsx";
 import { Card, CardContent, CardHeader } from "~/components/ui/card.tsx";
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "~/components/ui/dialog.tsx";
+import { Skeleton } from "~/components/ui/skeleton.tsx";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip.tsx";
 import { useSearch } from "~/hooks/use-search.tsx";
 import {
@@ -67,6 +68,16 @@ export const Results = () => {
     (a, b) => new Date(b[0].created_at).getTime() - new Date(a[0].created_at).getTime(),
   );
 
+  if (result?.error) return <div className="flex justify-center text-destructive font-medium mt-4">{result.error}</div>;
+  if (isLoading)
+    return (
+      <div className="flex flex-col gap-4">
+        <Skeleton className="h-4 w-full" />
+        {Array.from({ length: 5 }).map((_, index) => (
+          <Skeleton key={index} className="h-48 w-full" />
+        ))}
+      </div>
+    );
   if (!result || !allResults.length) return null;
   return (
     <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>

@@ -4,7 +4,7 @@
 
 ![Nightwatch](./public/logo-white.png)
 
-Nightwatch collects and preserves tweets and Telegram messages from trusted blockchain sleuths, turning volatile threads and conversations into a convenient searchable record.
+Nightwatch collects and preserves tweets and Telegram messages from trusted blockchain sleuths, acting as a curated and convenient searchable record of their work.
 
 A ledger of exposure. A watchful memory. A stain that won't fade.
 

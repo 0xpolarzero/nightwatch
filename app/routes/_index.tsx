@@ -1,5 +1,6 @@
 import type { MetaFunction } from "@remix-run/react";
 
+import { Home } from "~/components/home.tsx";
 import { NavBar } from "~/components/nav-bar.tsx";
 import { Results } from "~/components/results.tsx";
 import { Search } from "~/components/search.tsx";
@@ -37,8 +38,13 @@ export default function Index() {
           <Search />
           <TooltipProvider>
             <Results />
+            <Home />
           </TooltipProvider>
         </main>
+        <footer className="flex justify-center px-4 py-2 text-muted-foreground text-xs">
+          Data on this app is updated every few hours. Is is intended to be a convenient archive rather than a real-time
+          monitoring source.
+        </footer>
       </div>
     </SearchProvider>
   );
