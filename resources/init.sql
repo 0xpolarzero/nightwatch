@@ -31,8 +31,8 @@ CREATE TYPE media_type AS (
 CREATE TYPE user_bio_type AS (
     description TEXT,
     user_mentions mention_type[],
-    url_mentions url_type[],
     urls url_type[]
+    url_mentions url_type[],
 );
 
 -- Table: tw_users

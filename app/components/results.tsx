@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { Card, CardContent, CardHeader } from "~/components/ui/card.tsx";
-import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "~/components/ui/dialog.tsx";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "~/components/ui/dialog.tsx";
 import { Skeleton } from "~/components/ui/skeleton.tsx";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip.tsx";
 import { useSearch } from "~/hooks/use-search.tsx";
@@ -225,11 +225,12 @@ const formatText = (
 const TweetMedia = ({
   media,
   isThumbnail = false,
-  onClick,
+  redirectUrl,
 }: {
   media: DbMediaType;
   isThumbnail?: boolean;
   onClick?: () => void;
+  redirectUrl?: string;
 }) => {
   const commonClasses = cn(
     isThumbnail
@@ -247,30 +248,65 @@ const TweetMedia = ({
         width={media.width}
         height={media.height}
         loading="lazy"
-        onClick={onClick}
       />
     );
   }
 
-  if (media.type === "video" || media.type === "animated_gif") {
-    // Use poster for thumbnail view if available and requested
-    const posterUrl = isThumbnail ? media.url : undefined;
+  if (media.type === "animated_gif") {
     return (
       <video
-        controls={!isThumbnail} // Only show controls when not a thumbnail (in the dialog)
-        muted // Mute by default
-        loop={media.type === "animated_gif"}
-        playsInline // Important for mobile browsers
+        controls={!isThumbnail}
+        muted
+        loop
+        playsInline
         src={media.url}
-        poster={posterUrl} // Use preview image as poster for thumbnail
         className={commonClasses}
         width={media.width}
         height={media.height}
-        preload={isThumbnail ? "metadata" : "auto"} // Preload less for thumbnail
-      >
-        Your browser does not support the video tag.
-      </video>
+        preload={isThumbnail ? "metadata" : "auto"}
+      />
     );
+  }
+
+  // TODO: We can include the media.video_info.variants in the database to play videos
+  if (media.type === "video") {
+    return (
+      <div className="relative">
+        <a href={redirectUrl} target="_blank" rel="noopener noreferrer" className={cn(commonClasses, "group")}>
+          <img
+            src={media.url}
+            aria-label="Tweet media"
+            alt="Tweet media"
+            className={commonClasses}
+            width={media.width}
+            height={media.height}
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <span className="absolute text-gray-200 text-xs font-medium text-center top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            Watch video on Twitter
+          </span>
+        </a>
+      </div>
+    );
+
+    // Use poster for thumbnail view if available and requested
+    // const posterUrl = isThumbnail ? media.url : undefined;
+    // return (
+    //   <video
+    //     controls={!isThumbnail}
+    //     muted
+    //     playsInline // Important for mobile browsers
+    //     src={media.url}
+    //     poster={posterUrl} // Use preview image as poster for thumbnail
+    //     className={commonClasses}
+    //     width={media.width}
+    //     height={media.height}
+    //     preload={isThumbnail ? "metadata" : "auto"} // Preload less for thumbnail
+    //   >
+    //     Your browser does not support the video tag.
+    //   </video>
+    // );
   }
 
   return null; // Handle unknown media types if necessary
@@ -408,6 +444,7 @@ const TweetCard = ({
 
   // Helper function to handle media click
   const handleMediaClick = (media: DbMediaType) => {
+    if (media.type === "video") return;
     setSelectedMedia(media);
     setIsDialogOpen(true);
   };
@@ -428,15 +465,14 @@ const TweetCard = ({
         {mainTweet.medias && mainTweet.medias.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {mainTweet.medias.map((media, index) => (
-              <DialogTrigger key={index} asChild>
-                <div onClick={() => handleMediaClick(media)}>
-                  <TweetMedia
-                    media={media}
-                    // deno-lint-ignore jsx-boolean-value
-                    isThumbnail={true}
-                  />
-                </div>
-              </DialogTrigger>
+              <div key={index} onClick={() => handleMediaClick(media)}>
+                <TweetMedia
+                  media={media}
+                  // deno-lint-ignore jsx-boolean-value
+                  isThumbnail={true}
+                  redirectUrl={mainTweet.url}
+                />
+              </div>
             ))}
           </div>
         )}
@@ -463,15 +499,14 @@ const TweetCard = ({
                 {replyTweet.medias && replyTweet.medias.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {replyTweet.medias.map((media, index) => (
-                      <DialogTrigger key={index} asChild>
-                        <div onClick={() => handleMediaClick(media)}>
-                          <TweetMedia
-                            media={media}
-                            // deno-lint-ignore jsx-boolean-value
-                            isThumbnail={true}
-                          />
-                        </div>
-                      </DialogTrigger>
+                      <div key={index} onClick={() => handleMediaClick(media)}>
+                        <TweetMedia
+                          media={media}
+                          // deno-lint-ignore jsx-boolean-value
+                          isThumbnail={true}
+                          redirectUrl={replyTweet.url}
+                        />
+                      </div>
                     ))}
                   </div>
                 )}
@@ -614,6 +649,8 @@ const TelegramMessageCard = ({ messages, query }: { messages: DbTelegramMessage[
 
   const mainMessage = messages[0];
   const replies = messages.slice(1);
+
+  console.log(messages);
 
   return (
     <Card className="gap-2">

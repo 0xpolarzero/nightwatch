@@ -95,20 +95,6 @@ export const insertBatchTweetsAndUsers = async (batch: AdvancedSearchResponse["t
     const mentionsArraySql =
       mentionRowsSql.length > 0 ? `ARRAY[${mentionRowsSql.join(", ")}]::mention_type[]` : "'{}'::mention_type[]"; // Empty array literal
 
-    // URLs Array for profile_bio (Profile URLs)
-    const urlRowsSql: Array<string> = [];
-    for (const url of user.profile_bio.urls) {
-      const urlPlaceholders = [
-        `$${userParamCounter++}`, // display_url
-        `$${userParamCounter++}`, // expanded_url
-        `$${userParamCounter++}`, // start_index
-        `$${userParamCounter++}`, // end_index
-      ];
-      urlRowsSql.push(`ROW(${urlPlaceholders.join(", ")})`);
-      currentParams.push(url.display_url, url.expanded_url, url.start_index, url.end_index);
-    }
-    const urlsArraySql = urlRowsSql.length > 0 ? `ARRAY[${urlRowsSql.join(", ")}]::url_type[]` : "'{}'::url_type[]";
-
     // URL Mentions Array for profile_bio (Description URLs)
     const urlMentionRowsSql: Array<string> = [];
     for (const urlMention of user.profile_bio.url_mentions) {
@@ -124,12 +110,27 @@ export const insertBatchTweetsAndUsers = async (batch: AdvancedSearchResponse["t
     const urlMentionsArraySql =
       urlMentionRowsSql.length > 0 ? `ARRAY[${urlMentionRowsSql.join(", ")}]::url_type[]` : "'{}'::url_type[]";
 
+    // URLs Array for profile_bio (Profile URLs)
+    const urlRowsSql: Array<string> = [];
+    for (const url of user.profile_bio.urls) {
+      const urlPlaceholders = [
+        `$${userParamCounter++}`, // display_url
+        `$${userParamCounter++}`, // expanded_url
+        `$${userParamCounter++}`, // start_index
+        `$${userParamCounter++}`, // end_index
+      ];
+      urlRowsSql.push(`ROW(${urlPlaceholders.join(", ")})`);
+      currentParams.push(url.display_url, url.expanded_url, url.start_index, url.end_index);
+    }
+    const urlsArraySql = urlRowsSql.length > 0 ? `ARRAY[${urlRowsSql.join(", ")}]::url_type[]` : "'{}'::url_type[]";
+
     // Construct the main ROW literal for profile_bio, casting the whole row
     const profileBioRowSql = `ROW(
       ${descriptionPlaceholder},
       ${mentionsArraySql},
-      ${urlMentionsArraySql},
-      ${urlsArraySql}
+      -- these should be inverted but url mentions array was added later
+      ${urlsArraySql},
+      ${urlMentionsArraySql}
     )::user_bio_type`;
 
     // Construct the full VALUES fragment for this user: (basic_placeholders..., profile_bio_ROW)
