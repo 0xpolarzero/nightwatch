@@ -111,7 +111,7 @@ Nightwatch is designed to be deployed on [Deno Deploy](https://deno.com/deploy).
 
 2. Deploy manually (if not using GitHub Actions):
    ```bash
-   pnpm deploy
+   pnpm run deploy
    ```
 
 ## Architecture
