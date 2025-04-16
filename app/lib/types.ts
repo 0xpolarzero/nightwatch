@@ -17,8 +17,13 @@ export interface AdvancedSearchResponse {
         description: string;
         entities: {
           description: {
-            user_mentions: Array<{
+            user_mentions?: Array<{
               screen_name: string;
+              indices: [number, number];
+            }>;
+            urls?: Array<{
+              display_url: string;
+              expanded_url: string;
               indices: [number, number];
             }>;
           };
@@ -87,6 +92,7 @@ export interface DbMediaType {
 export interface DbUserBioType {
   description: string;
   user_mentions: DbMentionType[];
+  url_mentions: DbUrlType[];
   urls: DbUrlType[];
 }
 

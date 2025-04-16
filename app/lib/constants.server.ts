@@ -2,6 +2,7 @@ import { SyncSource } from "~/lib/types.ts";
 
 export const RELEVANT_SOURCES = [
   { platform: "twitter", username: "zachxbt" },
+  { platform: "twitter", username: "coffeebreak_YT" },
   { platform: "telegram", channel: "investigations" },
 ] as const satisfies Array<SyncSource>;
 export const BATCH_SIZE = 200;

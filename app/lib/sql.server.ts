@@ -25,17 +25,29 @@ export const insertBatchTweetsAndUsers = async (batch: AdvancedSearchResponse["t
         following: tweet.author.following,
         profile_bio: {
           description: tweet.author.profile_bio.description,
-          user_mentions: tweet.author.profile_bio.entities.description.user_mentions.map((user_mention) => ({
-            username: user_mention.screen_name,
-            start_index: user_mention.indices[0],
-            end_index: user_mention.indices[1],
-          })),
-          urls: tweet.author.profile_bio.entities.url.urls.map((url) => ({
-            display_url: url.display_url,
-            expanded_url: url.expanded_url,
-            start_index: url.indices[0],
-            end_index: url.indices[1],
-          })),
+          // Map description user_mention entities to profile_bio.user_mentions
+          user_mentions:
+            tweet.author.profile_bio.entities.description?.user_mentions?.map((user_mention) => ({
+              username: user_mention.screen_name,
+              start_index: user_mention.indices[0],
+              end_index: user_mention.indices[1],
+            })) ?? [],
+          // Map description URL entities to profile_bio.url_mentions
+          url_mentions:
+            tweet.author.profile_bio.entities.description?.urls?.map((url) => ({
+              display_url: url.display_url,
+              expanded_url: url.expanded_url,
+              start_index: url.indices[0],
+              end_index: url.indices[1],
+            })) ?? [],
+          // Map profile URL entities to profile_bio.urls
+          urls:
+            tweet.author.profile_bio.entities.url?.urls?.map((url) => ({
+              display_url: url.display_url,
+              expanded_url: url.expanded_url,
+              start_index: url.indices[0],
+              end_index: url.indices[1],
+            })) ?? [],
         },
       };
       return acc;
@@ -83,7 +95,7 @@ export const insertBatchTweetsAndUsers = async (batch: AdvancedSearchResponse["t
     const mentionsArraySql =
       mentionRowsSql.length > 0 ? `ARRAY[${mentionRowsSql.join(", ")}]::mention_type[]` : "'{}'::mention_type[]"; // Empty array literal
 
-    // URLs Array for profile_bio
+    // URLs Array for profile_bio (Profile URLs)
     const urlRowsSql: Array<string> = [];
     for (const url of user.profile_bio.urls) {
       const urlPlaceholders = [
@@ -95,11 +107,30 @@ export const insertBatchTweetsAndUsers = async (batch: AdvancedSearchResponse["t
       urlRowsSql.push(`ROW(${urlPlaceholders.join(", ")})`);
       currentParams.push(url.display_url, url.expanded_url, url.start_index, url.end_index);
     }
-    // Construct the ARRAY literal for URLs, casting the whole array
-    const urlsArraySql = urlRowsSql.length > 0 ? `ARRAY[${urlRowsSql.join(", ")}]::url_type[]` : "'{}'::url_type[]"; // Empty array literal
+    const urlsArraySql = urlRowsSql.length > 0 ? `ARRAY[${urlRowsSql.join(", ")}]::url_type[]` : "'{}'::url_type[]";
+
+    // URL Mentions Array for profile_bio (Description URLs)
+    const urlMentionRowsSql: Array<string> = [];
+    for (const urlMention of user.profile_bio.url_mentions) {
+      const urlMentionPlaceholders = [
+        `$${userParamCounter++}`, // display_url
+        `$${userParamCounter++}`, // expanded_url
+        `$${userParamCounter++}`, // start_index
+        `$${userParamCounter++}`, // end_index
+      ];
+      urlMentionRowsSql.push(`ROW(${urlMentionPlaceholders.join(", ")})`);
+      currentParams.push(urlMention.display_url, urlMention.expanded_url, urlMention.start_index, urlMention.end_index);
+    }
+    const urlMentionsArraySql =
+      urlMentionRowsSql.length > 0 ? `ARRAY[${urlMentionRowsSql.join(", ")}]::url_type[]` : "'{}'::url_type[]";
 
     // Construct the main ROW literal for profile_bio, casting the whole row
-    const profileBioRowSql = `ROW(${descriptionPlaceholder}, ${mentionsArraySql}, ${urlsArraySql})::user_bio_type`;
+    const profileBioRowSql = `ROW(
+      ${descriptionPlaceholder},
+      ${mentionsArraySql},
+      ${urlMentionsArraySql},
+      ${urlsArraySql}
+    )::user_bio_type`;
 
     // Construct the full VALUES fragment for this user: (basic_placeholders..., profile_bio_ROW)
     const fragment = `(${placeholders.join(", ")}, ${profileBioRowSql})`;
@@ -151,8 +182,8 @@ export const insertBatchTweetsAndUsers = async (batch: AdvancedSearchResponse["t
       tweet.extendedEntities?.media?.map((media) => ({
         url: media.media_url_https,
         type: media.type,
-        width: media.sizes?.large?.w ?? null,
-        height: media.sizes?.large?.h ?? null,
+        width: media.sizes?.large?.w ?? 0,
+        height: media.sizes?.large?.h ?? 0,
         start_index: media.indices[0],
         end_index: media.indices[1],
       })) ?? [];

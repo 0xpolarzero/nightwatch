@@ -309,7 +309,7 @@ const TweetHeader = ({
         <div className="flex gap-1.5 items-center w-full">
           <TooltipTrigger className="cursor-pointer" asChild>
             <p
-              className={`${isReply ? "text-xs" : ""} font-${isReply ? "medium" : "semibold"} text-gray-${isReply ? "800" : "900"} dark:text-${isReply ? "gray-200" : "white"}`}
+              className={`${isReply ? "text-xs" : ""} font-${isReply ? "medium" : "semibold"} text-gray-${isReply ? "800" : "900"} dark:text-gray-${isReply ? "400" : "200"}`}
             >
               {user.display_name}
             </p>
@@ -354,8 +354,24 @@ const TwitterProfileCard = ({ user }: { user: DbTwitterUser }) => {
       {/* Bio description */}
       {user.profile_bio?.description && (
         <p className="text-sm">
-          {formatText(user.profile_bio.description, user.profile_bio.user_mentions, user.profile_bio.urls, "")}
+          {formatText(user.profile_bio.description, user.profile_bio.user_mentions, user.profile_bio.url_mentions, "")}
         </p>
+      )}
+
+      {/* Links */}
+      {user.profile_bio?.urls && user.profile_bio?.urls.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {user.profile_bio.urls.map((url) => (
+            <a
+              href={url.expanded_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-link hover:underline hover:text-link-foreground text-xs font-medium cursor-pointer"
+            >
+              {url.display_url}
+            </a>
+          ))}
+        </div>
       )}
 
       {/* Stats */}
