@@ -19,7 +19,7 @@ export const Search = () => {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Input anything you want to look up..."
-        className="min-w-[300px]"
+        className="sm:min-w-[300px] text-sm sm:text-base"
       />
       <Button type="submit" variant="outline" className="cursor-pointer" onClick={search} disabled={isLoading}>
         {!!isLoading && (

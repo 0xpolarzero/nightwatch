@@ -342,7 +342,7 @@ const TweetHeader = ({
             <AvatarFallback>{user.display_name.charAt(0)}</AvatarFallback>
           </Avatar>
         </TooltipTrigger>
-        <div className="flex gap-1.5 items-center w-full">
+        <div className="grid grid-cols-[auto_1fr] sm:flex gap-x-1.5 items-center w-full">
           <TooltipTrigger className="cursor-pointer" asChild>
             <p
               className={`${isReply ? "text-xs" : ""} font-${isReply ? "medium" : "semibold"} text-gray-${isReply ? "800" : "900"} dark:text-gray-${isReply ? "400" : "200"}`}
@@ -353,13 +353,13 @@ const TweetHeader = ({
           <TooltipTrigger className="cursor-pointer" asChild>
             <p className="text-gray-500 dark:text-gray-400 text-xs">@{user.username}</p>
           </TooltipTrigger>
-          <p className="text-gray-500 dark:text-gray-400 text-xs">·</p>
+          <p className="hidden sm:block text-gray-500 dark:text-gray-400 text-xs">·</p>
           <p className="text-gray-500 dark:text-gray-400 text-xs flex-1">{formatDate(createdAt)}</p>
           <a
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-link hover:underline hover:text-link-foreground text-xs font-medium cursor-pointer"
+            className="col-span-3 text-link hover:underline hover:text-link-foreground text-xs font-medium cursor-pointer"
           >
             View on Twitter
           </a>
@@ -450,14 +450,14 @@ const TweetCard = ({
   };
 
   return (
-    <Card className="gap-2">
+    <Card className="gap-2 py-4 sm:py-6">
       {/* Header for the main tweet */}
       <CardHeader>
         <TweetHeader user={mainTweet.user} createdAt={mainTweet.created_at} url={mainTweet.url} />
       </CardHeader>
 
       {/* Content: Main tweet + media + replies */}
-      <CardContent className="flex flex-col gap-4">
+      <CardContent className="flex flex-col gap-4 px-4 sm:px-6">
         {/* Use the updated formatText function for the main tweet */}
         {formatText(mainTweet.text, mainTweet.user_mentions, mainTweet.urls, query)}
 
@@ -609,7 +609,7 @@ const TelegramMessageHeader = ({
             </Avatar>
           </TooltipTrigger>
         )}
-        <div className="flex gap-1.5 items-center w-full">
+        <div className="flex flex-col sm:flex-row gap-x-1.5 sm:items-center w-full">
           <TooltipTrigger className="cursor-pointer" asChild>
             <p
               className={`${isReply ? "text-xs" : ""} font-${isReply ? "medium" : "semibold"} text-gray-${isReply ? "700" : "900"} dark:text-gray-${isReply ? "400" : "200"}`}
@@ -622,7 +622,7 @@ const TelegramMessageHeader = ({
               <p className="text-gray-500 dark:text-gray-400 text-xs">@{channel.channel_username}</p>
             </TooltipTrigger>
           )}
-          <p className="text-gray-500 dark:text-gray-400 text-xs">·</p>
+          <p className="hidden sm:block text-gray-500 dark:text-gray-400 text-xs">·</p>
           <p className="text-gray-500 dark:text-gray-400 text-xs flex-1">{formatDate(createdAt)}</p>
           <a
             href={url}

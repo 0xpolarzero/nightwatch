@@ -34,7 +34,7 @@ export default function Index() {
         <header className="w-full">
           <NavBar />
         </header>
-        <main className="flex flex-col gap-2 p-4 overflow-hidden flex-1 w-full">
+        <main className="flex flex-col gap-2 p-2 sm:p-4 overflow-hidden flex-1 w-full">
           <Search />
           <TooltipProvider>
             <Results />
