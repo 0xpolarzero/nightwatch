@@ -1,13 +1,23 @@
-import { sql } from "~/lib/db.server.ts";
-import { AdvancedSearchResponse, DbAuthor, DbMediaType, DbMentionType, DbUrlType } from "~/lib/types.ts";
+import { NeonQueryInTransaction } from "@neondatabase/serverless";
 
-export const insertBatchTweetsAndAuthors = async (batch: AdvancedSearchResponse["tweets"]) => {
+import { sql } from "~/lib/db.server.ts";
+import {
+  AdvancedSearchResponse,
+  DbMediaType,
+  DbMentionType,
+  DbTelegramChannel,
+  DbTelegramMessage,
+  DbTwitterUser,
+  DbUrlType,
+} from "~/lib/types.ts";
+
+export const insertBatchTweetsAndUsers = async (batch: AdvancedSearchResponse["tweets"]) => {
   // Process this batch of tweets
   // 3. Insert users into the database.
-  const authors = batch.reduce(
+  const users = batch.reduce(
     (acc, tweet) => {
       acc[tweet.author.id] = {
-        id: Number(tweet.author.id),
+        id: BigInt(tweet.author.id),
         username: tweet.author.userName,
         display_name: tweet.author.name,
         profile_picture_url: tweet.author.profilePicture,
@@ -30,41 +40,41 @@ export const insertBatchTweetsAndAuthors = async (batch: AdvancedSearchResponse[
       };
       return acc;
     },
-    {} as Record<string, DbAuthor>,
+    {} as Record<string, DbTwitterUser>,
   );
 
-  // --- Format data for Author INSERT using VALUES with ROW/ARRAY literals ---
-  const authorSqlFragments: Array<string> = [];
-  const authorParams: Array<string | number> = [];
-  let authorParamCounter = 1;
+  // --- Format data for user INSERT using VALUES with ROW/ARRAY literals ---
+  const userSqlFragments: Array<string> = [];
+  const userParams: Array<string | bigint | number> = [];
+  let userParamCounter = 1;
 
-  for (const author of Object.values(authors)) {
-    // --- Prepare parameters and placeholders for this author ---
-    const currentParams: Array<string | number> = [];
+  for (const user of Object.values(users)) {
+    // --- Prepare parameters and placeholders for this user ---
+    const currentParams: Array<string | bigint | number> = [];
     const placeholders: Array<string> = []; // To store $1, $2, etc. for basic fields
 
-    // Basic author fields
+    // Basic user fields
     currentParams.push(
-      author.id,
-      author.username,
-      author.display_name,
-      author.profile_picture_url,
-      author.followers,
-      author.following,
+      user.id,
+      user.username,
+      user.display_name,
+      user.profile_picture_url,
+      user.followers,
+      user.following,
     );
-    placeholders.push(...currentParams.map(() => `$${authorParamCounter++}`)); // $1 to $6
+    placeholders.push(...currentParams.map(() => `$${userParamCounter++}`)); // $1 to $6
 
     // Profile Bio Description
-    currentParams.push(author.profile_bio.description);
-    const descriptionPlaceholder = `$${authorParamCounter++}`; // $7
+    currentParams.push(user.profile_bio.description);
+    const descriptionPlaceholder = `$${userParamCounter++}`; // $7
 
     // Mentions Array for profile_bio
     const mentionRowsSql: Array<string> = [];
-    for (const mention of author.profile_bio.user_mentions) {
+    for (const mention of user.profile_bio.user_mentions) {
       const mentionPlaceholders = [
-        `$${authorParamCounter++}`, // username
-        `$${authorParamCounter++}`, // start_index
-        `$${authorParamCounter++}`, // end_index
+        `$${userParamCounter++}`, // username
+        `$${userParamCounter++}`, // start_index
+        `$${userParamCounter++}`, // end_index
       ];
       mentionRowsSql.push(`ROW(${mentionPlaceholders.join(", ")})`);
       currentParams.push(mention.username, mention.start_index, mention.end_index);
@@ -75,12 +85,12 @@ export const insertBatchTweetsAndAuthors = async (batch: AdvancedSearchResponse[
 
     // URLs Array for profile_bio
     const urlRowsSql: Array<string> = [];
-    for (const url of author.profile_bio.urls) {
+    for (const url of user.profile_bio.urls) {
       const urlPlaceholders = [
-        `$${authorParamCounter++}`, // display_url
-        `$${authorParamCounter++}`, // expanded_url
-        `$${authorParamCounter++}`, // start_index
-        `$${authorParamCounter++}`, // end_index
+        `$${userParamCounter++}`, // display_url
+        `$${userParamCounter++}`, // expanded_url
+        `$${userParamCounter++}`, // start_index
+        `$${userParamCounter++}`, // end_index
       ];
       urlRowsSql.push(`ROW(${urlPlaceholders.join(", ")})`);
       currentParams.push(url.display_url, url.expanded_url, url.start_index, url.end_index);
@@ -89,21 +99,21 @@ export const insertBatchTweetsAndAuthors = async (batch: AdvancedSearchResponse[
     const urlsArraySql = urlRowsSql.length > 0 ? `ARRAY[${urlRowsSql.join(", ")}]::url_type[]` : "'{}'::url_type[]"; // Empty array literal
 
     // Construct the main ROW literal for profile_bio, casting the whole row
-    const profileBioRowSql = `ROW(${descriptionPlaceholder}, ${mentionsArraySql}, ${urlsArraySql})::author_bio_type`;
+    const profileBioRowSql = `ROW(${descriptionPlaceholder}, ${mentionsArraySql}, ${urlsArraySql})::user_bio_type`;
 
-    // Construct the full VALUES fragment for this author: (basic_placeholders..., profile_bio_ROW)
+    // Construct the full VALUES fragment for this user: (basic_placeholders..., profile_bio_ROW)
     const fragment = `(${placeholders.join(", ")}, ${profileBioRowSql})`;
-    authorSqlFragments.push(fragment);
-    authorParams.push(...currentParams); // Add all params for this author to the main list
+    userSqlFragments.push(fragment);
+    userParams.push(...currentParams); // Add all params for this user to the main list
   }
 
-  // Execute the INSERT query for authors if any authors exist
-  if (authorSqlFragments.length > 0) {
-    const authorValuesSql = authorSqlFragments.join(",\n  "); // Join fragments for multi-row VALUES
-    const authorInsertSql = `
-            INSERT INTO authors (id, username, display_name, profile_picture_url, followers, following, profile_bio)
+  // Execute the INSERT query for users if any users exist
+  if (userSqlFragments.length > 0) {
+    const userValuesSql = userSqlFragments.join(",\n  "); // Join fragments for multi-row VALUES
+    const userInsertSql = `
+            INSERT INTO tw_users (id, username, display_name, profile_picture_url, followers, following, profile_bio)
             VALUES
-              ${authorValuesSql}
+              ${userValuesSql}
             ON CONFLICT (id) DO UPDATE SET
               username = EXCLUDED.username,
               display_name = EXCLUDED.display_name,
@@ -113,13 +123,13 @@ export const insertBatchTweetsAndAuthors = async (batch: AdvancedSearchResponse[
               profile_bio = EXCLUDED.profile_bio;
           `;
 
-    await sql.query(authorInsertSql, authorParams); // Pass constructed SQL and flat params list
+    await sql.query(userInsertSql, userParams); // Pass constructed SQL and flat params list
   }
 
   // 4. Insert new tweets into the database.
   // --- Format data for Tweet INSERT using VALUES with ROW/ARRAY literals ---
   const tweetSqlFragments: Array<string> = [];
-  const tweetParams: Array<string | number | null> = [];
+  const tweetParams: Array<string | number | bigint | null> = [];
   let tweetParamCounter = 1;
 
   for (const tweet of batch) {
@@ -148,16 +158,16 @@ export const insertBatchTweetsAndAuthors = async (batch: AdvancedSearchResponse[
       })) ?? [];
 
     // --- Prepare parameters and placeholders for this tweet ---
-    const currentParams: Array<string | number | null> = [];
+    const currentParams: Array<string | number | bigint | null> = [];
     const placeholders: Array<string> = []; // To store $1, $2, etc. for basic fields
 
     // Basic tweet fields
     currentParams.push(
-      Number(tweet.id),
+      BigInt(tweet.id),
       tweet.url,
       tweet.text,
-      Number(tweet.author.id),
-      tweet.conversationId ? Number(tweet.conversationId) : null,
+      BigInt(tweet.author.id),
+      tweet.conversationId ? BigInt(tweet.conversationId) : null,
       tweet.createdAt,
     );
     placeholders.push(...currentParams.map(() => `$${tweetParamCounter++}`)); // $1 to $6
@@ -217,7 +227,7 @@ export const insertBatchTweetsAndAuthors = async (batch: AdvancedSearchResponse[
   if (tweetSqlFragments.length > 0) {
     const tweetValuesSql = tweetSqlFragments.join(",\n  "); // Join fragments
     const tweetInsertSql = `
-            INSERT INTO tweets (id, url, text, author_id, conversation_id, created_at, user_mentions, urls, medias)
+            INSERT INTO tw_posts (id, url, text, user_id, conversation_id, created_at, user_mentions, urls, medias)
             VALUES
               ${tweetValuesSql}
             ON CONFLICT (id) DO NOTHING;
@@ -226,4 +236,196 @@ export const insertBatchTweetsAndAuthors = async (batch: AdvancedSearchResponse[
   }
 
   return batch.length;
+};
+
+export const insertBatchTelegramMessagesAndChannel = async (
+  messages: Array<Omit<DbTelegramMessage, "channel" | "thread_id">>,
+  channelInfo: DbTelegramChannel,
+) => {
+  // 1. Insert or update the channel information
+  const channelParams = [
+    channelInfo.id,
+    channelInfo.title,
+    channelInfo.about,
+    channelInfo.channel_username,
+    channelInfo.admin_usernames,
+  ];
+
+  const channelInsertSql = `
+    INSERT INTO tg_channels (id, title, about, channel_username, admin_usernames)
+    VALUES ($1, $2, $3, $4, $5)
+    ON CONFLICT (id) DO UPDATE SET
+      title = EXCLUDED.title,
+      about = EXCLUDED.about,
+      channel_username = EXCLUDED.channel_username,
+      admin_usernames = EXCLUDED.admin_usernames;
+  `;
+
+  await sql.query(channelInsertSql, channelParams);
+
+  // 2. Insert messages using temp table and pre-calculating thread_id
+  if (messages.length === 0) return 0;
+
+  // Use a transaction to ensure temp table exists only for this operation
+  await sql.transaction((tx) => {
+    const queries: Array<NeonQueryInTransaction> = [];
+
+    // --- Step 2a: Create Temp Table (without thread_id initially) ---
+    queries.push(
+      tx.query(`
+        CREATE TEMP TABLE _incoming_tg_messages (
+          id TEXT PRIMARY KEY,
+          message_id BIGINT NOT NULL,
+          message TEXT NOT NULL,
+          url TEXT NOT NULL,
+          channel_id BIGINT NOT NULL,
+          reply_to_message_id BIGINT,
+          created_at TIMESTAMPTZ NOT NULL,
+          has_media BOOLEAN NOT NULL,
+          urls url_type[]
+          -- No thread_id column initially
+        ) ON COMMIT DROP;
+      `),
+    );
+
+    // --- Step 2b: Prepare and Insert into Temp Table ---
+    const messageSqlFragments: Array<string> = [];
+    const messageParams: Array<string | number | bigint | boolean | null> = [];
+    let messageParamCounter = 1;
+
+    for (const message of messages) {
+      const currentParams: Array<string | number | bigint | boolean | null> = [];
+      const placeholders: Array<string> = [];
+
+      // Basic fields (no thread_id)
+      currentParams.push(
+        message.id,
+        message.message_id,
+        message.message,
+        message.url,
+        message.channel_id,
+        message.reply_to_message_id,
+        message.created_at,
+        message.has_media,
+      );
+      placeholders.push(...currentParams.map(() => `$${messageParamCounter++}`)); // $1 to $8
+
+      // URLs Array - Build ROW expressions and collect individual parameters
+      const urlRowsSql: Array<string> = [];
+      if (message.urls && message.urls.length > 0) {
+        for (const url of message.urls) {
+          const urlPlaceholders = [
+            `$${messageParamCounter++}`, // display_url
+            `$${messageParamCounter++}`, // expanded_url
+            `$${messageParamCounter++}`, // start_index
+            `$${messageParamCounter++}`, // end_index
+          ];
+          urlRowsSql.push(`ROW(${urlPlaceholders.join(", ")})`);
+          currentParams.push(url.display_url, url.expanded_url, url.start_index, url.end_index);
+        }
+      }
+      // Construct the ARRAY literal SQL fragment, casting the whole array.
+      const urlsArraySql = urlRowsSql.length > 0 ? `ARRAY[${urlRowsSql.join(", ")}]::url_type[]` : "NULL"; // Use SQL NULL for empty arrays
+
+      // Construct the full VALUES fragment for this message for the temp table:
+      // (basic_placeholders..., urls_ARRAY_SQL_Fragment)
+      // Note: urlsArraySql is part of the SQL string, not a placeholder itself.
+      const fragment = `(${placeholders.join(", ")}, ${urlsArraySql})`;
+      messageSqlFragments.push(fragment);
+      // Add all parameters collected for this message (basic fields + URL components)
+      messageParams.push(...currentParams);
+    }
+
+    // Execute insert into temp table if needed
+    if (messageSqlFragments.length > 0) {
+      const messageValuesSql = messageSqlFragments.join(",\n  ");
+      const tempInsertSql = `
+        INSERT INTO _incoming_tg_messages (
+          id, message_id, message, url, channel_id, reply_to_message_id,
+          created_at, has_media, urls
+        )
+        VALUES
+          ${messageValuesSql};
+      `;
+      // Pass the flat list of all collected parameters
+      queries.push(tx.query(tempInsertSql, messageParams));
+    }
+
+    // --- Step 2c: Add thread_id column to temp table ---
+    queries.push(tx.query(`ALTER TABLE _incoming_tg_messages ADD COLUMN thread_id TEXT;`));
+
+    // --- Step 2d: Calculate thread_id using Recursive CTE and Update Temp Table ---
+    // Only run if there were messages inserted into the temp table
+    if (messageSqlFragments.length > 0) {
+      queries.push(
+        tx.query(`
+          WITH RECURSIVE thread_roots AS (
+              -- Anchor: Messages that are roots OR reply to something already in the final table
+              SELECT
+                  tmp.id AS message_id,
+                  -- Use final parent's thread_id, or final parent's id, or tmp's id as the root
+                  COALESCE(final_parent.thread_id, final_parent.id, tmp.id) AS root_id,
+                  0 as depth -- For cycle detection/prevention
+              FROM _incoming_tg_messages tmp
+              LEFT JOIN tg_messages final_parent -- Check final table for parent
+                  ON tmp.channel_id = final_parent.channel_id
+                  AND tmp.reply_to_message_id = final_parent.message_id
+              -- Anchor condition: message is a root OR its parent is outside the batch (in final table)
+              WHERE tmp.reply_to_message_id IS NULL OR final_parent.id IS NOT NULL
+
+              UNION ALL
+
+              -- Recursive step: Find children (within the batch) of messages already processed
+              SELECT
+                  child.id AS message_id,
+                  tr.root_id, -- Propagate the root_id from the parent
+                  tr.depth + 1
+              FROM _incoming_tg_messages child
+              -- Find the parent *within the temp table*
+              JOIN _incoming_tg_messages parent_in_batch
+                  ON child.reply_to_message_id = parent_in_batch.message_id
+                  AND child.channel_id = parent_in_batch.channel_id
+              -- Join parent_in_batch to the recursive set (thread_roots) to link to the root
+              JOIN thread_roots tr ON parent_in_batch.id = tr.message_id
+              WHERE tr.depth < 50 -- Safety break for deep threads or potential cycles
+          )
+          -- Update the temp table with the calculated root_id for each message
+          UPDATE _incoming_tg_messages tmp
+          SET thread_id = tr.root_id
+          FROM thread_roots tr
+          WHERE tmp.id = tr.message_id;
+        `),
+      );
+    }
+
+    // --- Step 2e: Insert from Temp Table (with calculated thread_id) into Final Table ---
+    if (messageSqlFragments.length > 0) {
+      const finalInsertSql = `
+        INSERT INTO tg_messages (
+          id, message_id, message, url, channel_id, reply_to_message_id,
+          created_at, has_media, urls,
+          thread_id -- Select the pre-calculated thread_id
+        )
+        SELECT
+          tmp.id,
+          tmp.message_id,
+          tmp.message,
+          tmp.url,
+          tmp.channel_id,
+          tmp.reply_to_message_id,
+          tmp.created_at,
+          tmp.has_media,
+          tmp.urls,
+          tmp.thread_id -- Select the calculated thread_id from the temp table
+        FROM
+          _incoming_tg_messages tmp
+        ON CONFLICT (id) DO NOTHING; -- No complex COALESCE needed here anymore
+      `;
+      queries.push(tx.query(finalInsertSql));
+    }
+
+    return queries;
+  });
+
+  return messages.length;
 };

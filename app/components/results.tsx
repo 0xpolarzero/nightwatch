@@ -1,4 +1,4 @@
-import { XIcon } from "lucide-react";
+import { PaperclipIcon, XIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar.tsx";
@@ -7,7 +7,15 @@ import { Card, CardContent, CardHeader } from "~/components/ui/card.tsx";
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "~/components/ui/dialog.tsx";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip.tsx";
 import { useSearch } from "~/hooks/use-search.tsx";
-import { DbAuthor, DbMediaType, DbMentionType, DbTweet, DbUrlType } from "~/lib/types.ts";
+import {
+  DbMediaType,
+  DbMentionType,
+  DbTelegramChannel,
+  DbTelegramMessage,
+  DbTweet,
+  DbTwitterUser,
+  DbUrlType,
+} from "~/lib/types.ts";
 import { cn } from "~/lib/utils.ts";
 
 export const Results = () => {
@@ -22,41 +30,72 @@ export const Results = () => {
     if (!open) setSelectedMedia(null);
   };
 
+  // Group tweets by conversation_id (or alone if no conversation_id)
   const groupedTweets = useMemo(() => {
-    // Group tweets by conversation_id (or alone if no conversation_id)
-    const grouped = result?.reduce(
-      (acc, tweet) => {
-        acc[tweet.conversation_id?.toString() || tweet.id.toString()] = [
-          ...(acc[tweet.conversation_id?.toString() || tweet.id.toString()] || []),
-          tweet,
-        ];
-        return acc;
-      },
-      {} as Record<string, Array<DbTweet>>,
+    if (!result?.tweets) return []; // Handle case where tweets might be undefined
+    return Object.values(
+      result.tweets.reduce(
+        (acc, tweet) => {
+          // Use conversation_id as the primary key, fallback to tweet id
+          const key = tweet.conversation_id?.toString() || tweet.id.toString();
+          acc[key] = [...(acc[key] || []), { ...tweet, type: "tweet" }];
+          return acc;
+        },
+        {} as Record<string, Array<DbTweet & { type: "tweet" }>>,
+      ),
     );
+  }, [result?.tweets]); // Depend specifically on tweets
 
-    return Object.values(grouped || {}).sort(
-      (a, b) => new Date(b[0].created_at).getTime() - new Date(a[0].created_at).getTime(),
+  // Group Telegram messages by thread_id (or alone if no thread_id)
+  const groupedTgMessages = useMemo(() => {
+    if (!result?.tgMessages) return []; // Handle case where tgMessages might be undefined
+    return Object.values(
+      result.tgMessages.reduce(
+        (acc, message) => {
+          // Use thread_id as the primary key, fallback to message id
+          // Ensure thread_id is treated as string for keys
+          const key = message.thread_id?.toString() || message.id.toString();
+          acc[key] = [...(acc[key] || []), { ...message, type: "tgMessage" }];
+          return acc;
+        },
+        {} as Record<string, Array<DbTelegramMessage & { type: "tgMessage" }>>, // Use DbTelegramMessage type
+      ),
     );
-  }, [result]);
+  }, [result?.tgMessages]); // Depend specifically on tgMessages
 
-  if (!result) return null;
+  const allResults = [...groupedTweets, ...groupedTgMessages].sort(
+    (a, b) => new Date(b[0].created_at).getTime() - new Date(a[0].created_at).getTime(),
+  );
+
+  if (!result || !allResults.length) return null;
   return (
     <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
       <div className="flex flex-col gap-4 overflow-y-auto">
+        {/* Display counts - adjust as needed */}
         <p className="text-gray-500 dark:text-gray-400 text-xs">
-          {groupedTweets.length} {groupedTweets.length === 1 ? "tweet" : "tweets"} ({result.length} including replies)
+          Found {groupedTweets.length} {groupedTweets.length <= 1 ? "tweet" : "tweets"} ({result.tweets.length}{" "}
+          including user replies), {groupedTgMessages.length}{" "}
+          {groupedTgMessages.length <= 1 ? "Telegram message" : "Telegram messages"} ({result.tgMessages.length}{" "}
+          including reply context).
         </p>
         <div className="flex flex-col gap-4">
-          {groupedTweets.map((tweets) => (
-            <TweetCard
-              key={tweets[0].id}
-              tweets={tweets}
-              query={memoizedQuery}
-              setSelectedMedia={setSelectedMedia}
-              setIsDialogOpen={setIsDialogOpen}
-            />
-          ))}
+          {allResults.map((result) =>
+            result[0].type === "tweet" ? (
+              <TweetCard
+                key={result[0].id}
+                tweets={result as Array<DbTweet>}
+                query={memoizedQuery}
+                setSelectedMedia={setSelectedMedia}
+                setIsDialogOpen={setIsDialogOpen}
+              />
+            ) : result[0].type === "tgMessage" ? (
+              <TelegramMessageCard
+                key={result[0].id}
+                messages={result as Array<DbTelegramMessage>}
+                query={memoizedQuery}
+              />
+            ) : null,
+          )}
         </div>
       </div>
 
@@ -68,8 +107,8 @@ export const Results = () => {
           </Button>
         }
       >
-        <DialogTitle className="sr-only">Tweet Media</DialogTitle>
-        <DialogDescription className="sr-only">Tweet Media</DialogDescription>
+        <DialogTitle className="sr-only">Media Viewer</DialogTitle>
+        <DialogDescription className="sr-only">Media Viewer</DialogDescription>
         {selectedMedia && (
           <div className="flex items-center justify-center overflow-auto">
             <TweetMedia media={selectedMedia} isThumbnail={false} />
@@ -86,6 +125,7 @@ const formatText = (
   mentions: DbMentionType[] | null | undefined,
   urls: DbUrlType[] | null | undefined,
   query: string,
+  className?: string,
 ): JSX.Element => {
   // Decode HTML entities like &amp; to & before processing
   const decodedText = text.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
@@ -114,7 +154,7 @@ const formatText = (
           href={`https://twitter.com/${entity.username}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-link hover:underline hover:text-link-foreground"
+          className={cn("text-link hover:underline hover:text-link-foreground", className)}
         >
           {decodedText.substring(entity.start_index, entity.end_index)}
         </a>,
@@ -127,7 +167,7 @@ const formatText = (
           href={entity.expanded_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-link hover:underline hover:text-link-foreground"
+          className={cn("text-link hover:underline hover:text-link-foreground", className)}
         >
           {entity.display_url}
         </a>,
@@ -165,7 +205,9 @@ const formatText = (
     }
   });
 
-  return <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words">{finalNodes}</p>;
+  return (
+    <p className={cn("text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words", className)}>{finalNodes}</p>
+  );
 };
 
 // Helper component to render media (with thumbnail option)
@@ -225,12 +267,12 @@ const TweetMedia = ({
 
 // New reusable component for tweet headers
 const TweetHeader = ({
-  author,
+  user,
   createdAt,
   url,
   isReply = false,
 }: {
-  author: DbAuthor;
+  user: DbTwitterUser;
   createdAt: string;
   url: string;
   isReply?: boolean;
@@ -249,8 +291,8 @@ const TweetHeader = ({
       <div className={`flex items-center ${isReply ? "gap-2 text-sm" : "gap-3"}`}>
         <TooltipTrigger className="cursor-pointer" asChild>
           <Avatar className={cn(isReply && "size-6")}>
-            <AvatarImage src={author.profile_picture_url} alt={author.display_name} />
-            <AvatarFallback>{author.display_name.charAt(0)}</AvatarFallback>
+            <AvatarImage src={user.profile_picture_url} alt={user.display_name} />
+            <AvatarFallback>{user.display_name.charAt(0)}</AvatarFallback>
           </Avatar>
         </TooltipTrigger>
         <div className="flex gap-1.5 items-center w-full">
@@ -258,11 +300,11 @@ const TweetHeader = ({
             <p
               className={`${isReply ? "text-xs" : ""} font-${isReply ? "medium" : "semibold"} text-gray-${isReply ? "800" : "900"} dark:text-${isReply ? "gray-200" : "white"}`}
             >
-              {author.display_name}
+              {user.display_name}
             </p>
           </TooltipTrigger>
           <TooltipTrigger className="cursor-pointer" asChild>
-            <p className="text-gray-500 dark:text-gray-400 text-xs">@{author.username}</p>
+            <p className="text-gray-500 dark:text-gray-400 text-xs">@{user.username}</p>
           </TooltipTrigger>
           <p className="text-gray-500 dark:text-gray-400 text-xs">·</p>
           <p className="text-gray-500 dark:text-gray-400 text-xs flex-1">{formatDate(createdAt)}</p>
@@ -277,42 +319,42 @@ const TweetHeader = ({
         </div>
       </div>
       <TooltipContent className="bg-background border-1 border-gray-200 dark:border-gray-700 rounded-sm">
-        <TwitterProfileCard author={author} />
+        <TwitterProfileCard user={user} />
       </TooltipContent>
     </Tooltip>
   );
 };
 
-const TwitterProfileCard = ({ author }: { author: DbAuthor }) => {
+const TwitterProfileCard = ({ user }: { user: DbTwitterUser }) => {
   return (
     <div className="flex flex-col gap-3 p-2 max-w-[300px]">
       {/* Header with avatar and follow counts */}
       <div className="flex items-center gap-3">
         <Avatar className="size-8">
-          <AvatarImage src={author.profile_picture_url} alt={author.display_name} />
-          <AvatarFallback>{author.display_name.charAt(0)}</AvatarFallback>
+          <AvatarImage src={user.profile_picture_url} alt={user.display_name} />
+          <AvatarFallback>{user.display_name.charAt(0)}</AvatarFallback>
         </Avatar>
         <div className="flex flex-col">
-          <p className="font-bold text-gray-900 dark:text-gray-200 text-sm">{author.display_name}</p>
-          <p className="text-gray-500 dark:text-gray-400 text-xs">@{author.username}</p>
+          <p className="font-bold text-gray-900 dark:text-gray-200 text-sm">{user.display_name}</p>
+          <p className="text-gray-500 dark:text-gray-400 text-xs">@{user.username}</p>
         </div>
       </div>
 
       {/* Bio description */}
-      {author.profile_bio?.description && (
+      {user.profile_bio?.description && (
         <p className="text-sm">
-          {formatText(author.profile_bio.description, author.profile_bio.user_mentions, author.profile_bio.urls, "")}
+          {formatText(user.profile_bio.description, user.profile_bio.user_mentions, user.profile_bio.urls, "")}
         </p>
       )}
 
       {/* Stats */}
       <div className="flex gap-4 text-sm">
         <div className="flex gap-1">
-          <span className="font-semibold text-gray-900 dark:text-gray-200">{author.following.toLocaleString()}</span>
+          <span className="font-semibold text-gray-900 dark:text-gray-200">{user.following.toLocaleString()}</span>
           <span className="text-gray-500 dark:text-gray-400">Following</span>
         </div>
         <div className="flex gap-1">
-          <span className="font-semibold text-gray-900 dark:text-gray-200">{author.followers.toLocaleString()}</span>
+          <span className="font-semibold text-gray-900 dark:text-gray-200">{user.followers.toLocaleString()}</span>
           <span className="text-gray-500 dark:text-gray-400">Followers</span>
         </div>
       </div>
@@ -347,7 +389,7 @@ const TweetCard = ({
     <Card className="gap-2">
       {/* Header for the main tweet */}
       <CardHeader>
-        <TweetHeader author={mainTweet.author} createdAt={mainTweet.created_at} url={mainTweet.url} />
+        <TweetHeader user={mainTweet.user} createdAt={mainTweet.created_at} url={mainTweet.url} />
       </CardHeader>
 
       {/* Content: Main tweet + media + replies */}
@@ -380,7 +422,7 @@ const TweetCard = ({
               <div key={replyTweet.id} className="flex flex-col gap-2">
                 {/* Reply Header */}
                 <TweetHeader
-                  author={replyTweet.author}
+                  user={replyTweet.user}
                   createdAt={replyTweet.created_at}
                   url={replyTweet.url}
                   // deno-lint-ignore jsx-boolean-value
@@ -405,6 +447,202 @@ const TweetCard = ({
                       </DialogTrigger>
                     ))}
                   </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+// Profile card for Telegram channels (shown in tooltip)
+const TelegramChannelProfileCard = ({ channel }: { channel: DbTelegramChannel }) => {
+  // Function to get initials from title
+  const getInitials = (title: string) => {
+    return title
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase();
+  };
+
+  return (
+    <div className="flex flex-col gap-2 max-w-[300px]">
+      <div className="flex items-center gap-3 p-2">
+        {/* Header with avatar and name */}
+        <Avatar className="bg-blue-500 text-white">
+          {/* Placeholder for potential future channel image */}
+          {/* <AvatarImage src={channel.profile_picture_url} alt={channel.title} /> */}
+          <AvatarFallback>{getInitials(channel.title)}</AvatarFallback>
+        </Avatar>
+        <div className="flex flex-col">
+          <p className="font-bold text-gray-500 dark:text-gray-200 text-sm">{channel.title}</p>
+          {channel.channel_username && (
+            <p className="text-gray-500 dark:text-gray-400 text-xs">@{channel.channel_username}</p>
+          )}
+        </div>
+      </div>
+      {formatText(channel.about, [], [], "")}
+      <div className="text-gray-500 dark:text-gray-400 text-xs">
+        Moderated by{" "}
+        {channel.admin_usernames.map((admin) => (
+          <a
+            key={admin}
+            href={`https://t.me/${admin}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-link hover:underline hover:text-link-foreground"
+          >
+            @{admin}
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Reusable header component for Telegram messages
+const TelegramMessageHeader = ({
+  channel,
+  createdAt,
+  url,
+  isReply = false,
+}: {
+  channel: DbTelegramChannel;
+  createdAt: string;
+  url: string;
+  isReply?: boolean;
+}) => {
+  // Format date to be more readable
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  };
+
+  // Get the first letter of each word in the title
+  const getInitials = (title: string) => {
+    return title
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase();
+  };
+
+  return (
+    <Tooltip>
+      <div className={`flex items-center ${isReply ? "gap-2 text-sm" : "gap-3"}`}>
+        {!isReply && (
+          <TooltipTrigger className="cursor-pointer" asChild>
+            <Avatar className="bg-link-foreground text-white size-10">
+              {/* Placeholder for potential future channel image */}
+              {/* <AvatarImage src={channel.profile_picture_url} alt={channel.title} /> */}
+              <AvatarFallback className="bg-transparent">{getInitials(channel.title)}</AvatarFallback>
+            </Avatar>
+          </TooltipTrigger>
+        )}
+        <div className="flex gap-1.5 items-center w-full">
+          <TooltipTrigger className="cursor-pointer" asChild>
+            <p
+              className={`${isReply ? "text-xs" : ""} font-${isReply ? "medium" : "semibold"} text-gray-${isReply ? "700" : "900"} dark:text-gray-${isReply ? "400" : "200"}`}
+            >
+              {channel.title}
+            </p>
+          </TooltipTrigger>
+          {channel.channel_username && (
+            <TooltipTrigger className="cursor-pointer" asChild>
+              <p className="text-gray-500 dark:text-gray-400 text-xs">@{channel.channel_username}</p>
+            </TooltipTrigger>
+          )}
+          <p className="text-gray-500 dark:text-gray-400 text-xs">·</p>
+          <p className="text-gray-500 dark:text-gray-400 text-xs flex-1">{formatDate(createdAt)}</p>
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-link hover:underline hover:text-link-foreground text-xs font-medium cursor-pointer"
+          >
+            View on Telegram
+          </a>
+        </div>
+      </div>
+      <TooltipContent className="bg-background border-1 border-gray-200 dark:border-gray-700 rounded-sm">
+        <TelegramChannelProfileCard channel={channel} />
+      </TooltipContent>
+    </Tooltip>
+  );
+};
+
+// Card component for displaying a Telegram message thread
+const TelegramMessageCard = ({ messages, query }: { messages: DbTelegramMessage[]; query: string }) => {
+  // Ensure there's at least one message and messages are sorted chronologically
+  // The grouping logic now sorts messages before grouping.
+  if (!messages || messages.length === 0) return null;
+
+  const mainMessage = messages[0];
+  const replies = messages.slice(1);
+  console.log(mainMessage);
+
+  return (
+    <Card className="gap-2">
+      {/* Header for the main message */}
+      <CardHeader>
+        <TelegramMessageHeader channel={mainMessage.channel} createdAt={mainMessage.created_at} url={mainMessage.url} />
+      </CardHeader>
+
+      {/* Content: Main message + media alert + replies */}
+      <CardContent className="flex flex-col gap-4">
+        {/* Use the formatText function for the main message */}
+        {formatText(mainMessage.message, [], mainMessage.urls, query)}
+
+        {/* Media Alert for Main Message */}
+        {mainMessage.has_media && (
+          <a
+            href={mainMessage.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 hover:text-link hover:underline"
+          >
+            <PaperclipIcon className="size-3" />
+            Media attached (view on Telegram)
+          </a>
+        )}
+
+        {/* Replies section */}
+        {replies.length > 0 && (
+          <div className="flex flex-col gap-4 border-gray-200 dark:border-gray-700 text-sm border-l pl-4">
+            {/* Indented replies */}
+            {replies.map((replyMessage) => (
+              <div key={replyMessage.id} className="flex flex-col gap-2">
+                {/* Reply Header */}
+                <TelegramMessageHeader
+                  channel={replyMessage.channel}
+                  createdAt={replyMessage.created_at}
+                  url={replyMessage.url}
+                  // deno-lint-ignore jsx-boolean-value
+                  isReply={true}
+                />
+
+                {/* Reply Content */}
+                {formatText(replyMessage.message, [], replyMessage.urls, query)}
+
+                {/* Media Alert for Reply Message */}
+                {replyMessage.has_media && (
+                  <a
+                    href={replyMessage.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 hover:text-link hover:underline"
+                  >
+                    <PaperclipIcon className="size-3" />
+                    Media attached (view on Telegram)
+                  </a>
                 )}
               </div>
             ))}

@@ -84,44 +84,70 @@ export interface DbMediaType {
   end_index: number;
 }
 
-export interface DbAuthorBioType {
+export interface DbUserBioType {
   description: string;
   user_mentions: DbMentionType[];
   urls: DbUrlType[];
 }
 
-export interface DbAuthor {
-  id: number;
+export interface DbTwitterUser {
+  id: bigint;
   username: string;
   display_name: string;
   profile_picture_url: string;
   followers: number;
   following: number;
-  profile_bio: DbAuthorBioType;
+  profile_bio: DbUserBioType;
 }
 
 export interface DbTweet {
-  id: number;
+  id: bigint;
   url: string;
   text: string;
-  author_id: number;
-  conversation_id: number | null;
+  user_id: bigint;
+  conversation_id: bigint | null;
   created_at: string;
-  author: DbAuthor;
+  user: DbTwitterUser;
   user_mentions: Array<DbMentionType> | null;
   urls: Array<DbUrlType> | null;
   medias: Array<DbMediaType> | null;
 }
 
+// Define types for Telegram database models
+export interface DbTelegramChannel {
+  id: bigint;
+  title: string;
+  about: string;
+  channel_username: string;
+  admin_usernames: string[];
+}
+
+export interface DbTelegramMessage {
+  id: `${string}-${string}`;
+  message_id: bigint;
+  message: string;
+  url: string;
+  channel_id: bigint;
+  reply_to_message_id: bigint | null;
+  created_at: string;
+  urls: Array<DbUrlType> | null;
+  has_media: boolean;
+  thread_id: string;
+  channel: DbTelegramChannel;
+  reply_to?: DbTelegramMessage;
+}
+
 // API response types
 export interface ApiSearchResponse {
   tweets: Array<DbTweet>;
+  tgMessages: Array<DbTelegramMessage>;
   error?: string;
 }
 
 export interface ApiSyncResponse {
   message: string;
-  inserted: number;
+  inserted: Record<string, number>;
+  error?: string;
 }
 
 // Health check response
@@ -137,7 +163,5 @@ export interface HealthResponse {
   };
 }
 
-// Error response
-export interface ErrorResponse {
-  error: string;
-}
+// Sync source types
+export type SyncSource = { platform: "twitter"; username: string } | { platform: "telegram"; channel: string };

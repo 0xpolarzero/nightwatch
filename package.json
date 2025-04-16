@@ -10,7 +10,8 @@
     "format": "deno fmt",
     "lint": "deno lint && deno run -A npm:eslint .",
     "start": "deno serve -A --parallel ./server.production.ts",
-    "typecheck": "deno check --node-modules-dir=auto '**/*'"
+    "typecheck": "deno check --node-modules-dir=auto '**/*'",
+    "telegram-login": "dotenvx run -f .env --quiet -- sh -c 'tsx resources/telegram-login.ts'"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.0",
@@ -29,9 +30,11 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "tailwind-merge": "^3.2.0",
+    "telegram": "^2.26.22",
     "tw-animate-css": "^1.2.5"
   },
   "devDependencies": {
+    "@dotenvx/dotenvx": "^1.40.0",
     "@ianvs/prettier-plugin-sort-imports": "^4.4.1",
     "@remix-run/dev": "^2.16.5",
     "@tailwindcss/postcss": "^4.1.3",
@@ -47,10 +50,12 @@
     "eslint-plugin-jsx-a11y": "^6.7.1",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
+    "input": "^1.0.1",
     "prettier": "^3.5.3",
     "prettier-plugin-jsdoc": "^1.3.2",
     "prettier-plugin-tailwindcss": "^0.6.11",
     "tailwindcss": "^4.1.3",
+    "tsx": "^4.19.3",
     "typescript": "^5.1.6",
     "vite": "^6.0.0",
     "vite-tsconfig-paths": "^4.2.1"

@@ -1,12 +1,12 @@
 import { createContext, ReactNode, useContext, useState } from "react";
 
-import type { ApiSearchResponse, DbTweet } from "~/lib/types.ts";
+import type { ApiSearchResponse } from "~/lib/types.ts";
 
 // Define the shape of our search context
 interface SearchContextType {
   query: string;
   setQuery: (query: string) => void;
-  result: Array<DbTweet> | undefined;
+  result: ApiSearchResponse | undefined;
   isLoading: boolean;
   error: string | null;
   search: () => Promise<void>;
@@ -23,7 +23,7 @@ interface SearchProviderProps {
 
 export const SearchProvider = ({ children }: SearchProviderProps) => {
   const [query, setQuery] = useState("");
-  const [result, setResult] = useState<Array<DbTweet> | undefined>(undefined);
+  const [result, setResult] = useState<ApiSearchResponse | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,7 +44,7 @@ export const SearchProvider = ({ children }: SearchProviderProps) => {
         return;
       }
 
-      setResult(data.tweets.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()));
+      setResult(data);
     } catch (err) {
       setError("Failed to perform search. Please try again.");
       console.error("Search error:", err);

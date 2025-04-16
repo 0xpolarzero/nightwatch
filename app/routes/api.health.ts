@@ -1,4 +1,4 @@
-import { sql } from "~/lib/db.server";
+import { sql } from "~/lib/db.server.ts";
 
 export async function loader() {
   try {
@@ -19,11 +19,11 @@ export async function loader() {
         twitterApiConfigured,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return Response.json(
       {
         status: "error",
-        message: error.message,
+        message: error instanceof Error ? error.message : "Unknown error",
         checks: {
           databaseConfigured: Boolean(Deno.env.get("NEON_DATABASE_URL")),
           databaseConnected: false,
