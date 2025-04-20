@@ -19,7 +19,7 @@ import {
 } from "~/lib/types.ts";
 import { cn } from "~/lib/utils.ts";
 
-export const Results = () => {
+export const Feed = () => {
   const { result, query, isLoading } = useSearch();
   const memoizedQuery = useMemo(() => query, [isLoading]);
 

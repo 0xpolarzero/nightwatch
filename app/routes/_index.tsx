@@ -2,10 +2,11 @@ import type { MetaFunction } from "@remix-run/react";
 
 import { Home } from "~/components/home.tsx";
 import { NavBar } from "~/components/nav-bar.tsx";
-import { Results } from "~/components/results.tsx";
 import { Search } from "~/components/search.tsx";
 import { TooltipProvider } from "~/components/ui/tooltip.tsx";
 import { SearchProvider } from "~/hooks/use-search.tsx";
+
+import { Feed } from "../components/feed.tsx";
 
 export const meta: MetaFunction = () => {
   return [
@@ -37,7 +38,7 @@ export default function Index() {
         <main className="flex flex-col gap-2 p-2 sm:p-4 overflow-hidden flex-1 w-full">
           <Search />
           <TooltipProvider>
-            <Results />
+            <Feed />
             <Home />
           </TooltipProvider>
         </main>

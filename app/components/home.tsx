@@ -1,7 +1,8 @@
+import { Button } from "~/components/ui/button.tsx";
 import { useSearch } from "~/hooks/use-search.tsx";
 
 export const Home = () => {
-  const { result, isLoading } = useSearch();
+  const { init, result, isLoading } = useSearch();
 
   if (result || isLoading) return null;
   return (
@@ -24,6 +25,9 @@ export const Home = () => {
             Use the search bar above to look up any mention of an actor, project, or anything else.
           </p>
         </div>
+        <Button variant="secondary" className="col-span-2 cursor-pointer" onClick={init}>
+          Explore feed
+        </Button>
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ interface SearchContextType {
   isLoading: boolean;
   error: string | null;
   search: () => Promise<void>;
+  init: () => Promise<void>;
   clearResults: () => void;
 }
 
@@ -53,6 +54,27 @@ export const SearchProvider = ({ children }: SearchProviderProps) => {
     }
   };
 
+  const init = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/home`);
+      const data = (await response.json()) as ApiSearchResponse;
+      if (data.error) {
+        setError(data.error);
+        return;
+      }
+
+      setResult(data);
+    } catch (err) {
+      setError("Failed to init. Please try again.");
+      console.error("Search error:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const clearResults = () => {
     setResult(undefined);
     setQuery("");
@@ -67,6 +89,7 @@ export const SearchProvider = ({ children }: SearchProviderProps) => {
         isLoading,
         error,
         search,
+        init,
         clearResults,
       }}
     >
