@@ -1,6 +1,6 @@
 import { type LoaderFunctionArgs } from "@remix-run/deno";
 
-import { CACHE_TTL, DEFAULT_LIMIT } from "~/lib/constants.server.ts";
+import { /* CACHE_TTL, */ DEFAULT_LIMIT } from "~/lib/constants.server.ts";
 import { sql } from "~/lib/db.server.ts";
 import { ApiSearchResponse, DbTelegramMessage, DbTweet } from "~/lib/types.ts";
 
@@ -18,18 +18,18 @@ export async function loader({ request }: LoaderFunctionArgs) {
   }
 
   // Use a different cache for the home feed
-  const cache = await caches.open("home-feed");
-  try {
-    const cached = await cache.match(request);
-    if (cached) {
-      console.log(`Cache hit for home feed (limit: ${limit})`);
-      cached.headers.set("X-Cache-Status", "HIT");
-      return cached;
-    }
-    console.log(`Cache miss for home feed (limit: ${limit})`);
-  } catch (error) {
-    console.error("Cache lookup error:", error);
-  }
+  // const cache = await caches.open("home-feed");
+  // try {
+  //   const cached = await cache.match(request);
+  //   if (cached) {
+  //     console.log(`Cache hit for home feed (limit: ${limit})`);
+  //     cached.headers.set("X-Cache-Status", "HIT");
+  //     return cached;
+  //   }
+  //   console.log(`Cache miss for home feed (limit: ${limit})`);
+  // } catch (error) {
+  //   console.error("Cache lookup error:", error);
+  // }
 
   let response: Response;
   try {
@@ -128,14 +128,14 @@ export async function loader({ request }: LoaderFunctionArgs) {
   }
 
   // Set cache headers and store in cache
-  response.headers.set("Cache-Control", `max-age=${CACHE_TTL}`);
-  response.headers.set("X-Cache-Status", "MISS");
-  try {
-    await cache.put(request, response.clone());
-    console.log(`Cached home feed response (limit: ${limit})`);
-  } catch (cacheError) {
-    console.error("Cache put error:", cacheError);
-  }
+  // response.headers.set("Cache-Control", `max-age=${CACHE_TTL}`);
+  // response.headers.set("X-Cache-Status", "MISS");
+  // try {
+  //   await cache.put(request, response.clone());
+  //   console.log(`Cached home feed response (limit: ${limit})`);
+  // } catch (cacheError) {
+  //   console.error("Cache put error:", cacheError);
+  // }
 
   return response;
 }
