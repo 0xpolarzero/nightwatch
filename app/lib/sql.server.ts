@@ -24,17 +24,17 @@ export const insertBatchTweetsAndUsers = async (batch: AdvancedSearchResponse["t
         followers: tweet.author.followers,
         following: tweet.author.following,
         profile_bio: {
-          description: tweet.author.profile_bio.description,
+          description: tweet.author.profile_bio?.description ?? "",
           // Map description user_mention entities to profile_bio.user_mentions
           user_mentions:
-            tweet.author.profile_bio.entities.description?.user_mentions?.map((user_mention) => ({
+            tweet.author.profile_bio?.entities?.description?.user_mentions?.map((user_mention) => ({
               username: user_mention.screen_name,
               start_index: user_mention.indices[0],
               end_index: user_mention.indices[1],
             })) ?? [],
           // Map description URL entities to profile_bio.url_mentions
           url_mentions:
-            tweet.author.profile_bio.entities.description?.urls?.map((url) => ({
+            tweet.author.profile_bio?.entities?.description?.urls?.map((url) => ({
               display_url: url.display_url,
               expanded_url: url.expanded_url,
               start_index: url.indices[0],
@@ -42,7 +42,7 @@ export const insertBatchTweetsAndUsers = async (batch: AdvancedSearchResponse["t
             })) ?? [],
           // Map profile URL entities to profile_bio.urls
           urls:
-            tweet.author.profile_bio.entities.url?.urls?.map((url) => ({
+            tweet.author.profile_bio?.entities?.url?.urls?.map((url) => ({
               display_url: url.display_url,
               expanded_url: url.expanded_url,
               start_index: url.indices[0],
