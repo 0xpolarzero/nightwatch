@@ -42,7 +42,7 @@ export default {
 /* ---------------------------------- CRON ---------------------------------- */
 Deno.cron("Sync sources", { hour: { every: 6 } }, async () => {
   console.log("Running scheduled sources sync...");
-  const response = await fetch(`http://localhost:${Deno.env.get("PORT") ?? "8000"}/api/periodic-sync`, {
+  const response = await fetch(`http://172.17.0.1:${Deno.env.get("PORT") ?? "8000"}/api/periodic-sync`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${Deno.env.get("CRON_SECRET")}`,
