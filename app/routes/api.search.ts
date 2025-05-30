@@ -142,7 +142,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   }
 
   // Set cache headers and store in cache
-  response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+  response.headers.set("Cache-Control", `max-age=${CACHE_TTL}`);
   response.headers.set("X-Cache-Status", "MISS");
   try {
     await cache.put(request, response.clone());
